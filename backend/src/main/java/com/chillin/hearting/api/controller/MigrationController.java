@@ -32,9 +32,20 @@ public class MigrationController {
         log.info("MySQL to Redis 데이터 마이그레이션 - heartInfo");
 
         User user = (User) httpServletRequest.getAttribute("user");
-        if (!ROLE_ADMIN.equals(user.getRole())) throw new UnAuthorizedException(UNAUTHORIZED_MESSAGE);
+//        if (!ROLE_ADMIN.equals(user.getRole())) throw new UnAuthorizedException(UNAUTHORIZED_MESSAGE);
 
         migrationService.migrateHeartInfo();
+        ResponseDTO responseDTO = ResponseDTO.builder().status(MESSAGE_SUCCESS).message(MIGRATE_HEART_INFO_SUCCESS).build();
+        return new ResponseEntity<>(responseDTO, HttpStatus.OK);
+    }
+
+    @GetMapping("/heartList")
+    public ResponseEntity<ResponseDTO> migrateHeartList(HttpServletRequest httpServletRequest) {
+        log.info("MySQL to Redis 데이터 마이그레이션 - heartList");
+
+        User user = (User) httpServletRequest.getAttribute("user");
+
+        migrationService.migrateHeartList();
         ResponseDTO responseDTO = ResponseDTO.builder().status(MESSAGE_SUCCESS).message(MIGRATE_HEART_INFO_SUCCESS).build();
         return new ResponseEntity<>(responseDTO, HttpStatus.OK);
     }
