@@ -5,6 +5,7 @@ import lombok.extern.slf4j.Slf4j;
 
 import javax.persistence.*;
 import java.io.Serializable;
+import java.time.LocalDateTime;
 
 @Slf4j
 @Entity
@@ -24,6 +25,9 @@ public class UserHeart implements Serializable {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "heart_id", nullable = false)
     private Heart heart;
+
+    @Column(name = "created_date", nullable = false)
+    private LocalDateTime createdDate;
 
     @Builder
     public UserHeart(User user, Heart heart) {
