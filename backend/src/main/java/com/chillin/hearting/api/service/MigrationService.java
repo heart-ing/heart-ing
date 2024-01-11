@@ -8,6 +8,7 @@ import com.chillin.hearting.db.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.redis.core.HashOperations;
+import org.springframework.data.redis.core.ListOperations;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -47,6 +48,20 @@ public class MigrationService {
         }
 
         log.info("모든 Heart Info 마이그레이션에 성공했습니다.");
+    }
+
+    /**
+     * MySQL에 저장된 모든 하트 정보를 Redis에 업데이트 합니다.
+     */
+    public void migrateHeartList() {
+        ListOperations<String, Object> listOperations = redisTemplate.opsForList();
+        listOperations.rightPush("heartList:default",1);
+        listOperations.rightPush("heartList:default",2);
+        listOperations.rightPush("heartList:default",3);
+        listOperations.rightPush("heartList:default",4);
+        listOperations.rightPush("heartList:default",5);
+
+        log.info("모든 Heart List 마이그레이션에 성공했습니다.");
     }
 
     /**
