@@ -39,7 +39,7 @@ function HeartBoard({ socket }: { socket: Socket | null }) {
   let params = new URL(document.URL).searchParams;
   let userId = params.get("id");
   const getUserProfile = useCallback(
-    async (userId: string | null) => {
+    async () => {
       if (!userId) return;
       const data = await getProfile(userId);
       if (data.status === "success") {
@@ -49,24 +49,23 @@ function HeartBoard({ socket }: { socket: Socket | null }) {
         navigate("/notfound");
       }
     },
-    [navigate]
+    [navigate, userId]
   );
 
   // userId로 최근 메시지 리스트 가져오기
-  const getRecivedMessages = useCallback(async (userId: string | null) => {
+  const getRecivedMessages = useCallback(async () => {
     if (!userId) return;
     const data = await getReceived(userId);
     if (data.status === "success") {
       setReceivedList(data.data.messageList);
     }
-  }, []);
+  }, [userId]);
 
   // 내 userId localStorage에서 가져오기
   const myId = getUserInfo().userId;
 
   const checkPopupClose = (): boolean => {
     const popupNoShow = localStorage.getItem("popupNoShow");
-
     if (popupNoShow !== "true") {
       return true;
     } else {
@@ -83,26 +82,10 @@ function HeartBoard({ socket }: { socket: Socket | null }) {
         checkPopupClose() ? setIsPopupShow(true) : setIsPopupShow(false);
       }
     }
-    getUserProfile(userId);
-    getRecivedMessages(userId);
+    getUserProfile();
+    getRecivedMessages();
     setReadMessage(false);
-    return () => {
-      setReadMessage(false);
-    };
-  }, [
-    isLogin,
-    myId,
-    userId,
-    setIsMyBoard,
-    getUserProfile,
-    setReadMessage,
-    getRecivedMessages,
-  ]);
-
-  useEffect(() => {
-    getRecivedMessages(userId);
-    getUserProfile(userId);
-  }, [getRecivedMessages, getUserProfile, userId, readMessage]);
+  }, []);
 
   const outsideHeightStyle = {
     height: `calc((var(--vh, 1vh) * 100) - ${isMyBoard ? 12 : 7}rem)`,
