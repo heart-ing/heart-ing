@@ -43,7 +43,7 @@ function MessageModal({ ...props }) {
   const [isOpenReporting, setIsOpenReporting] =
     useRecoilState(isOpenReportingAtom);
 
-  const setIsOpenReporting = useSetRecoilState(isOpenReportingAtom)
+  // const setIsOpenReporting = useSetRecoilState(isOpenReportingAtom)
   
   const [messageData, setMessageData] = useState<IMessageDetailTypes>();
 
