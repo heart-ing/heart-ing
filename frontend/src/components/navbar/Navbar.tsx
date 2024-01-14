@@ -100,10 +100,8 @@ function Navbar({ socket }: { socket: Socket | null }) {
 
   useEffect(() => {
     onSocket();
-    if (isLogin) {
-      getData();
-    }
-  }, []);
+    getData();
+  }, [isLogin]);
 
   return (
     <nav className="navHeight">
