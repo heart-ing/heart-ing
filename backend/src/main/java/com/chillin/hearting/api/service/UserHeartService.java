@@ -33,8 +33,7 @@ public class UserHeartService {
         Optional<Heart> findHeart = heartRepository.findById(heartId);
         if (findHeart.isEmpty()) throw new HeartNotFoundException();
         UserHeart userHeart = new UserHeart(findUser, findHeart.get());
-        List<UserHeart> findUserHeart = userHeartRepository.findByHeartIdAndUserId(heartId, userId);
-        if (!findUserHeart.isEmpty()) throw new HeartAlreadyAcquiredException();
-        userHeartRepository.save(userHeart);
+        UserHeart findUserHeart = userHeartRepository.findByHeartIdAndUserId(heartId, userId).orElseGet(null);
+        if (findUserHeart != null) userHeartRepository.save(userHeart);
     }
 }
