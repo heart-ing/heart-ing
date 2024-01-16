@@ -11,7 +11,6 @@ import java.util.List;
 
 @Slf4j
 @Getter
-@Setter
 @ToString
 @Builder
 public class HeartDetailData implements Data {
@@ -37,5 +36,21 @@ public class HeartDetailData implements Data {
                 .acqCondition(heart.getAcqCondition())
                 .isLocked(true)
                 .build();
+    }
+
+    public void lock() {
+        this.isLocked = true;
+    }
+
+    public void unLock() {
+        this.isLocked = false;
+    }
+
+    public void setAcqTrue() {
+        this.isAcq = true;
+    }
+
+    public void setConditions(List<HeartConditionData> conditions) {
+        this.conditions = conditions;
     }
 }

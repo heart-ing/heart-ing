@@ -14,14 +14,24 @@ public class HeartConditionData implements Data {
     private Long heartId;
     private String name;
     private String heartUrl;
-    private Long currentValue;
-    private Long maxValue;
+    private int currentValue;
+    private int maxValue;
 
     public static HeartConditionData of(Heart heart) {
         return HeartConditionData.builder()
                 .heartId((heart != null) ? heart.getId() : null)
                 .name((heart != null) ? heart.getName() : null)
                 .heartUrl((heart != null) ? heart.getImageUrl() : null)
+                .build();
+    }
+
+    public static HeartConditionData of(Heart heart, int currentValue, int maxValue) {
+        return HeartConditionData.builder()
+                .heartId((heart != null) ? heart.getId() : null)
+                .name((heart != null) ? heart.getName() : null)
+                .heartUrl((heart != null) ? heart.getImageUrl() : null)
+                .currentValue(currentValue)
+                .maxValue(maxValue)
                 .build();
     }
 }
