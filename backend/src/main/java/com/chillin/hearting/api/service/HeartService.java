@@ -46,9 +46,14 @@ public class HeartService {
     private static final int HEART_FOUR_LEAF_MAX_VALUE = 4;
     private static final int HEART_NOIR_MAX_VALUE = 2;
 
-    private static final HashSet<Long> lockedHeartSet = new HashSet<>(Arrays.asList(4L, 5L));
+    private static final long ID_YELLOW_HEART = 1;
+    private static final long ID_BLUE_HEART = 2;
+    private static final long ID_GREEN_HEART = 3;
+    private static final long ID_PINK_HEART = 4;
+    private static final long ID_SUNNY_HEART = 9;
+    private static final long ID_SHAMROCK_HEART = 12;
 
-    private ArrayList<HeartConditionData> heartAcqConditions;
+    private static final HashSet<Long> lockedHeartSet = new HashSet<>(Arrays.asList(4L, 5L));
 
     /**
      * 모든 도감 리스트를 반환합니다.
@@ -75,7 +80,7 @@ public class HeartService {
         for (Heart heart : allHearts) {
             HeartData heartData = HeartData.of(heart, (HEART_TYPE_DEFAULT.equals(heart.getType()) || myHeartSet.contains(heart.getId()) ? false : true));
             if (user != null && heartData.getIsLocked())
-                heartData.setAcq(isAcquiredSpecialHeart(user.getId(), heart.getId(), false));
+                heartData.setAcq(isAcquirableSpecialHeart(user.getId(), heart.getId()));
             resHearts.add(heartData);
         }
         return HeartListData.builder().heartList(resHearts).build();
@@ -110,8 +115,7 @@ public class HeartService {
     public List<HeartData> findUserMessageHearts(User user) {
         log.info("메시지 전송용 하트 리스트 조회 - 기본 하트 + 내가 획득한 하트를 조회한다.");
         List<HeartData> resHearts = new ArrayList<>();
-        List<Heart> findHearts = heartRepository.findAllByType(HEART_TYPE_DEFAULT);
-        for (Heart heart : findHearts) {
+        for (Heart heart : findDefaultHeartList()) {
             resHearts.add(HeartData.of(heart, false));
         }
 
@@ -148,22 +152,18 @@ public class HeartService {
         HeartDetailData heartDetailData = HeartDetailData.of(findHeart);
 
         if (HEART_TYPE_DEFAULT.equals(findHeart.getType())) {
-            heartDetailData.setIsLocked(false);
+            heartDetailData.unLock();
         } else if (HEART_TYPE_SPECIAL.equals(findHeart.getType()) || HEART_TYPE_EVENT.equals(findHeart.getType())) {
             if (user != null) {
                 String userId = user.getId();
                 log.info("{}님이 {}번 하트를 상세 조회합니다.", userId, heartId);
-                List<UserHeart> findUserHeart = userHeartRepository.findByHeartIdAndUserId(heartId, userId);
-                if (!findUserHeart.isEmpty()) {
-                    log.info("{}님의 {}번 하트는 이미 획득했습니다", userId, heartId);
-                    heartDetailData.setIsLocked(false);
+                if (hasUserHeart(userId,heartId)) {
+                    heartDetailData.unLock();
                 } else {
-                    if (isAcquiredSpecialHeart(userId, heartId, true)) {
-                        log.info("{}님의 {}하트는 획득 가능합니다.", userId, heartId);
-                        heartDetailData.setIsAcq(true);
+                    if (isAcquirableSpecialHeart(userId, heartId)) {
+                        heartDetailData.setAcqTrue();
                     }
-                    List<HeartConditionData> conditionList = heartAcqConditions;
-                    heartDetailData.setConditions(conditionList);
+                    heartDetailData.setConditions(getSpecialHeartAcqCondition(userId, heartId));
                 }
             } else {
                 log.info("비로그인 유저가 {}번 하트를 상세 조회합니다.", heartId);
@@ -183,12 +183,11 @@ public class HeartService {
     public boolean hasAcquirableHeart(String userId) {
         boolean isAcq = false;
         // 스페셜 하트 달성 여부 체크
-        List<Heart> specialHeartList = heartRepository.findAllByType(HEART_TYPE_SPECIAL);
         HashSet<Long> mySpecialHeartIds = findUserHeartIds(userId);
 
-        for (Heart heart : specialHeartList) {
+        for (Heart heart : findSpecialHeartList()) {
             Long hId = heart.getId();
-            if (!mySpecialHeartIds.contains(hId) && isAcquiredSpecialHeart(userId, hId, false)) {
+            if (!mySpecialHeartIds.contains(hId) && isAcquirableSpecialHeart(userId, hId)) {
                 String key = "user:" + userId + ":notifiedHeartId:" + hId;
                 if (!notificationRepository.hasNotificationIn24Hour(key)) {
                     User findUser = userRepository.findById(userId).orElseThrow(UserNotFoundException::new);
@@ -214,153 +213,164 @@ public class HeartService {
      *
      * @param userId
      * @param heartId
-     * @param isSave
      * @return 유저가 해당 하트를 획득 가능한가 ? true : false
      */
-    private boolean isAcquiredSpecialHeart(String userId, Long heartId, boolean isSave) {
+    private boolean isAcquirableSpecialHeart(String userId, Long heartId) {
         log.info("{}번 스페셜 하트 획득 조건을 충족했는지 확인합니다.", heartId);
-        List<Heart> defaultHeartList = null;
-        if (isSave) {
-            heartAcqConditions = new ArrayList<>();
-        }
-
         boolean isAcquirable = false;
         switch (heartId.intValue()) {
             case 7:
                 // 무지개 하트 - 모든 기본하트 1개 보내기
                 isAcquirable = true;
-                defaultHeartList = heartRepository.findAllByType(HEART_TYPE_DEFAULT);
-                for (Heart heart : defaultHeartList) {
+                for (Heart heart : findDefaultHeartList()) {
                     int sentHeartCnt = heartRepository.getUserSentHeartCnt(userId, heart.getId());
                     if (sentHeartCnt < HEART_RAINBOW_MAX_VALUE) {
                         isAcquirable = false;
                         log.info("무지개 하트를 획득 불가 - {}번 하트 조건 미충족", heart.getId());
-                    }
-                    if (isSave) {
-                        saveHeartCondition(heart.getId(), sentHeartCnt, HEART_RAINBOW_MAX_VALUE);
                     }
                 }
                 break;
             case 8:
                 // 민초 하트 - 파란색 하트 5개 보내기
                 isAcquirable = true;
-                long blueHeartId = 2L;
-                int blueHeartSentCnt = heartRepository.getUserSentHeartCnt(userId, blueHeartId);
+                int blueHeartSentCnt = heartRepository.getUserSentHeartCnt(userId, ID_BLUE_HEART);
                 if (blueHeartSentCnt < HEART_MINCHO_MAX_VALUE) {
                     isAcquirable = false;
-                    log.info("민초 하트를 획득 불가 - {}번 하트 조건 미충족", blueHeartId);
-                }
-                if (isSave) {
-                    saveHeartCondition(blueHeartId, blueHeartSentCnt, HEART_MINCHO_MAX_VALUE);
+                    log.info("민초 하트를 획득 불가 - {}번 하트 조건 미충족", ID_BLUE_HEART);
                 }
                 break;
             case 9:
                 // 햇살 하트 - 노랑 하트 5개 보내기
                 isAcquirable = true;
-                long yellowHeartId = 1L;
-                int yellowHeartSentCnt = heartRepository.getUserSentHeartCnt(userId, yellowHeartId);
+                int yellowHeartSentCnt = heartRepository.getUserSentHeartCnt(userId, ID_YELLOW_HEART);
                 if (yellowHeartSentCnt < HEART_SUNNY_MAX_VALUE) {
                     isAcquirable = false;
-                    log.info("햇살 하트를 획득 불가 - {}번 하트 조건 미충족", yellowHeartId);
-                }
-                if (isSave) {
-                    saveHeartCondition(yellowHeartId, yellowHeartSentCnt, HEART_SUNNY_MAX_VALUE);
+                    log.info("햇살 하트를 획득 불가 - {}번 하트 조건 미충족", ID_YELLOW_HEART);
                 }
                 break;
             case 10:
                 // 돋보기 하트 - 특정인에게 핑크 하트 3개 보내기
                 isAcquirable = true;
-                long pinkHeartId = 4L;
-                Integer result = messageRepository.findMaxMessageCountToSameUser(userId, pinkHeartId);
+                Integer result = messageRepository.findMaxMessageCountToSameUser(userId, ID_PINK_HEART);
                 int msgCnt = result == null ? 0 : result;
                 if (msgCnt < HEART_READING_GLASSES_MAX_VALUE) {
                     isAcquirable = false;
-                    log.info("돋보기 하트를 획득 불가 - {}번 하트 조건 미충족", pinkHeartId);
-                }
-                if (isSave) {
-                    saveHeartCondition(pinkHeartId, msgCnt, HEART_READING_GLASSES_MAX_VALUE);
+                    log.info("돋보기 하트를 획득 불가 - {}번 하트 조건 미충족", ID_PINK_HEART);
                 }
                 break;
             case 11:
                 // 아이스크림 하트  - 햇살 하트 3개 받기
                 isAcquirable = true;
-                long sunnyHeartId = 9L;
-                int receivedHeartCnt = heartRepository.getUserReceivedHeartCnt(userId, sunnyHeartId);
+                int receivedHeartCnt = heartRepository.getUserReceivedHeartCnt(userId, ID_SUNNY_HEART);
                 if (receivedHeartCnt < HEART_ICECREAM_MAX_VALUE) {
                     isAcquirable = false;
-                    log.info("아이스크림 하트를 획득 불가 - {}번 하트 조건 미충족", sunnyHeartId);
-                }
-                if (isSave) {
-                    saveHeartCondition(sunnyHeartId, receivedHeartCnt, HEART_ICECREAM_MAX_VALUE);
+                    log.info("아이스크림 하트를 획득 불가 - {}번 하트 조건 미충족", ID_SUNNY_HEART);
                 }
                 break;
             case 12:
                 // 세잎클로버 하트 - 초록 하트 3개 보내기
                 isAcquirable = true;
-                long greenHeartId = 3L;
-                int greenHeartSentCnt = heartRepository.getUserSentHeartCnt(userId, greenHeartId);
+                int greenHeartSentCnt = heartRepository.getUserSentHeartCnt(userId, ID_GREEN_HEART);
                 if (greenHeartSentCnt < HEART_SHAMROCK_MAX_VALUE) {
                     isAcquirable = false;
-                    log.info("세잎클로버 하트를 획득 불가 - {}번 하트 조건 미충족", greenHeartId);
-                }
-                if (isSave) {
-                    saveHeartCondition(greenHeartId, greenHeartSentCnt, HEART_SHAMROCK_MAX_VALUE);
+                    log.info("세잎클로버 하트를 획득 불가 - {}번 하트 조건 미충족", ID_GREEN_HEART);
                 }
                 break;
             case 13:
                 // 네잎클로버 하트 - 세잎클로버 하트 4개 받기
                 isAcquirable = true;
-                long shamrockHeartId = 12L;
-                int shamrockHeartReceivedCnt = heartRepository.getUserReceivedHeartCnt(userId, shamrockHeartId);
+                int shamrockHeartReceivedCnt = heartRepository.getUserReceivedHeartCnt(userId, ID_SHAMROCK_HEART);
                 if (shamrockHeartReceivedCnt < HEART_FOUR_LEAF_MAX_VALUE) {
                     isAcquirable = false;
-                    log.info("네잎클로버 하트를 획득 불가 - {}번 하트 조건 미충족", shamrockHeartId);
-                }
-                if (isSave) {
-                    saveHeartCondition(shamrockHeartId, shamrockHeartReceivedCnt, HEART_FOUR_LEAF_MAX_VALUE);
+                    log.info("네잎클로버 하트를 획득 불가 - {}번 하트 조건 미충족", ID_SHAMROCK_HEART);
                 }
                 break;
             case 14:
                 // 질투의 누아르 하트 - 모든 기본하트 2개 보내기
                 isAcquirable = true;
-                defaultHeartList = heartRepository.findAllByType(HEART_TYPE_DEFAULT);
-                for (Heart heart : defaultHeartList) {
+                for (Heart heart : findDefaultHeartList()) {
                     int sentHeartCnt = heartRepository.getUserSentHeartCnt(userId, heart.getId());
                     if (sentHeartCnt < HEART_NOIR_MAX_VALUE) {
                         isAcquirable = false;
                         log.info("누아르 하트를 획득 불가 - {}번 하트 조건 미충족", heart.getId());
                     }
-//                    if (isSave) {
-////                        saveHeartCondition(defaultHeartId, currentValue, HEART_NOIR_MAX_VALUE);
-////                    }
                 }
                 break;
-//            case 15:
-//                // 카네이션 하트 - 5/15 만 획득 가능
-//                isAcquirable = true;
-//                log.info("카네이션 하트를 획득할 수 있습니다!");
-//                break;
         }
         return isAcquirable;
     }
 
     /**
-     * 특정 하트 획득 상세 조건을 전역 변수에 저장한다.
+     * 특정 하트 획득 상세 조건을 리턴한다.
      *
-     * @param defaultHeartId
-     * @param currentValue
-     * @param maxValue
+     * @param userId
+     * @param heartId
+     *
      */
-    private void saveHeartCondition(long defaultHeartId, long currentValue, long maxValue) {
-        Heart heart = heartRepository.findById(defaultHeartId).orElseThrow(HeartNotFoundException::new);
-        heartAcqConditions.add(HeartConditionData.builder()
-                .heartId(heart.getId())
-                .name(heart.getName())
-                .heartUrl(heart.getImageUrl())
-                .currentValue(currentValue)
-                .maxValue(maxValue)
-                .build()
-        );
+    private ArrayList<HeartConditionData> getSpecialHeartAcqCondition(String userId, long heartId) {
+        ArrayList<HeartConditionData> result = new ArrayList<>();
+        if (heartId == 7) {
+            for (Heart defaultHeart : findDefaultHeartList()) {
+                int sentHeartCnt = heartRepository.getUserSentHeartCnt(userId, defaultHeart.getId());
+                Heart heart = heartRepository.findById(defaultHeart.getId()).orElseThrow(HeartNotFoundException::new);
+                result.add(
+                        HeartConditionData.of(heart, sentHeartCnt, HEART_RAINBOW_MAX_VALUE)
+                );
+            }
+
+        } else if (heartId == 8) {
+            Heart heart = heartRepository.findById(ID_BLUE_HEART).orElseThrow(HeartNotFoundException::new);
+            int sentHeartCnt = heartRepository.getUserSentHeartCnt(userId, ID_BLUE_HEART);
+            result.add(
+                    HeartConditionData.of(heart,sentHeartCnt,HEART_MINCHO_MAX_VALUE)
+            );
+
+        } else if (heartId == 9) {
+            Heart heart = heartRepository.findById(ID_YELLOW_HEART).orElseThrow(HeartNotFoundException::new);
+            int sentHeartCnt = heartRepository.getUserSentHeartCnt(userId, ID_YELLOW_HEART);
+            result.add(
+                    HeartConditionData.of(heart,sentHeartCnt,HEART_SUNNY_MAX_VALUE)
+            );
+
+        } else if (heartId == 10) {
+            Heart heart = heartRepository.findById(ID_PINK_HEART).orElseThrow(HeartNotFoundException::new);
+            int sentHeartCnt = heartRepository.getUserSentHeartCnt(userId, ID_PINK_HEART);
+            result.add(
+                    HeartConditionData.of(heart,sentHeartCnt,HEART_READING_GLASSES_MAX_VALUE)
+            );
+
+        } else if (heartId == 11) {
+            Heart heart = heartRepository.findById(ID_SUNNY_HEART).orElseThrow(HeartNotFoundException::new);
+            int receivedHeartCnt = heartRepository.getUserReceivedHeartCnt(userId, ID_SUNNY_HEART);
+            result.add(
+                    HeartConditionData.of(heart,receivedHeartCnt,HEART_ICECREAM_MAX_VALUE)
+            );
+
+        } else if (heartId == 12) {
+            Heart heart = heartRepository.findById(ID_GREEN_HEART).orElseThrow(HeartNotFoundException::new);
+            int sentHeartCnt = heartRepository.getUserSentHeartCnt(userId, ID_GREEN_HEART);
+            result.add(
+                    HeartConditionData.of(heart,sentHeartCnt,HEART_SHAMROCK_MAX_VALUE)
+            );
+
+        }  else if (heartId == 13) {
+            Heart heart = heartRepository.findById(ID_SHAMROCK_HEART).orElseThrow(HeartNotFoundException::new);
+            int receivedHeartCnt = heartRepository.getUserReceivedHeartCnt(userId, ID_SHAMROCK_HEART);
+            result.add(
+                    HeartConditionData.of(heart,receivedHeartCnt,HEART_FOUR_LEAF_MAX_VALUE)
+            );
+
+        } else if (heartId == 14) {
+            for (Heart heart : findDefaultHeartList()) {
+                int sentHeartCnt = heartRepository.getUserSentHeartCnt(userId, heart.getId());
+                result.add(
+                        HeartConditionData.of(heart,sentHeartCnt,HEART_NOIR_MAX_VALUE)
+                );
+            }
+        }
+
+        return result;
+
     }
 
     /**
@@ -393,5 +403,20 @@ public class HeartService {
             log.info(e.getMessage());
             migrationService.migrateUserReceivedHeart(userId);
         }
+    }
+
+    public boolean hasUserHeart(String userId, long heartId) {
+        UserHeart findUserHeart = userHeartRepository.findByHeartIdAndUserId(heartId, userId).orElseGet(null);
+        return findUserHeart != null;
+    }
+
+    @Transactional
+    public List<Heart> findDefaultHeartList() {
+        return heartRepository.findAllByType(HEART_TYPE_DEFAULT);
+    }
+
+    @Transactional
+    public List<Heart> findSpecialHeartList() {
+        return heartRepository.findAllByType(HEART_TYPE_SPECIAL);
     }
 }
