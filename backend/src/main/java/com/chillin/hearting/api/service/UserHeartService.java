@@ -6,14 +6,12 @@ import com.chillin.hearting.db.domain.UserHeart;
 import com.chillin.hearting.db.repository.HeartRepository;
 import com.chillin.hearting.db.repository.UserHeartRepository;
 import com.chillin.hearting.db.repository.UserRepository;
-import com.chillin.hearting.exception.HeartAlreadyAcquiredException;
 import com.chillin.hearting.exception.HeartNotFoundException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.List;
 import java.util.Optional;
 
 @Service
@@ -30,10 +28,9 @@ public class UserHeartService {
     @Transactional
     public void saveUserHearts(String userId, Long heartId) {
         User findUser = userRepository.findById(userId).get();
-        Optional<Heart> findHeart = heartRepository.findById(heartId);
-        if (findHeart.isEmpty()) throw new HeartNotFoundException();
-        UserHeart userHeart = new UserHeart(findUser, findHeart.get());
-        UserHeart findUserHeart = userHeartRepository.findByHeartIdAndUserId(heartId, userId).orElseGet(null);
-        if (findUserHeart != null) userHeartRepository.save(userHeart);
+        Heart findHeart = heartRepository.findById(heartId).orElseThrow(HeartNotFoundException::new);
+        UserHeart userHeart = UserHeart.of(findUser, findHeart);
+        Optional<UserHeart> findUserHeart = userHeartRepository.findByHeartIdAndUserId(heartId, userId);
+        if (findUserHeart.isEmpty()) userHeartRepository.save(userHeart);
     }
 }
