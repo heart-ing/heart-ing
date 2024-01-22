@@ -5,11 +5,13 @@ import com.chillin.hearting.api.data.NotificationListData;
 import com.chillin.hearting.db.domain.Heart;
 import com.chillin.hearting.db.domain.Message;
 import com.chillin.hearting.db.domain.Notification;
+import com.chillin.hearting.db.domain.User;
 import com.chillin.hearting.db.repository.NotificationRepository;
 import com.chillin.hearting.exception.NotificationNotFoundException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Sort;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -17,6 +19,8 @@ import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
+import java.util.concurrent.TimeUnit;
 
 @Slf4j
 @Service
@@ -25,6 +29,10 @@ import java.util.List;
 public class NotificationService {
 
     private final NotificationRepository notificationRepository;
+    private final RedisTemplate<String, Object> redisTemplate;
+
+    private final HeartService heartService;
+    private final UserService userService;
 
     @Transactional
     public NotificationListData getNotifications(String userId) {
@@ -78,5 +86,43 @@ public class NotificationService {
         log.info(notificationId + " 알림을 읽었습니다.");
 
         return notification.getId();
+    }
+
+    @Transactional(readOnly = true)
+    public List<Notification> findByUserIdAndIsActiveTrue(String userId, Sort sort) {
+        return notificationRepository.findByUserIdAndIsActiveTrue(userId, sort);
+    }
+
+    @Transactional(readOnly = true)
+    public Notification save(Notification notification) {
+        return notificationRepository.save(notification);
+    }
+
+    @Transactional(readOnly = true)
+    public Notification save(String userId, long heartId) {
+        User findUser = userService.findById(userId);
+        Heart findHeart = heartService.findById(heartId);
+
+        return save(Notification.builder()
+                .user(findUser)
+                .content(findHeart.getName() + "하트를 획득할 수 있습니다!")
+                .heart(findHeart)
+                .type("H")
+                .build());
+    }
+
+    @Transactional(readOnly = true)
+    public boolean hasNotificationIn24Hour(String key) {
+        return (redisTemplate.opsForValue().get(key) != null) ? true : false;
+    }
+
+    @Transactional(readOnly = true)
+    public void setNotificationFor24Hour(String key) {
+        redisTemplate.opsForValue().set(key, "true", 24L, TimeUnit.HOURS);
+    }
+
+    @Transactional(readOnly = true)
+    public Optional<Notification> findById(Long notificationId) {
+        return notificationRepository.findById(notificationId);
     }
 }

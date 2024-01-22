@@ -5,8 +5,7 @@ import com.chillin.hearting.api.data.SendMessageData;
 import com.chillin.hearting.api.request.ReportReq;
 import com.chillin.hearting.api.request.SendMessageReq;
 import com.chillin.hearting.api.response.ResponseDTO;
-import com.chillin.hearting.api.service.HeartService;
-import com.chillin.hearting.api.service.MessageService;
+import com.chillin.hearting.api.service.facade.MessageFacade;
 import com.chillin.hearting.db.domain.User;
 import com.chillin.hearting.exception.*;
 import lombok.RequiredArgsConstructor;
@@ -25,8 +24,7 @@ import javax.validation.Valid;
 public class MessageController {
 
     private static final String SUCCESS = "success";
-    private final MessageService messageService;
-    private final HeartService heartService;
+    private final MessageFacade messageFacade;
 
     @PostMapping("")
     public ResponseEntity<ResponseDTO> sendMessage(@Valid @RequestBody SendMessageReq sendMessageReq, HttpServletRequest httpServletRequest) {
@@ -56,21 +54,7 @@ public class MessageController {
             clientIp = clientIp.split(",")[0];
         }
 
-        SendMessageData data = messageService.sendMessage(sendMessageReq.getHeartId(), sendMessageReq.getSenderId(), sendMessageReq.getReceiverId(), sendMessageReq.getTitle(), sendMessageReq.getContent(), clientIp);
-
-        // receiver 하트 획득 조건 체크
-        log.info("receiver 하트 획득 조건 체크");
-        heartService.updateReceivedHeartCount(sendMessageReq.getReceiverId(), sendMessageReq.getHeartId());
-        heartService.hasAcquirableHeart(sendMessageReq.getReceiverId());
-
-        // sender 하트 획득 조건 체크 + 알림 필요한지 체크
-        log.info("sender 하트 획득 조건 체크");
-        if (user != null) {
-            heartService.updateSentHeartCount(sendMessageReq.getSenderId(), sendMessageReq.getHeartId());
-            if (heartService.hasAcquirableHeart(sendMessageReq.getSenderId())) {
-                data.setCheckSender(true);
-            }
-        }
+        SendMessageData data = messageFacade.sendMessage(sendMessageReq.getHeartId(), sendMessageReq.getSenderId(), sendMessageReq.getReceiverId(), sendMessageReq.getTitle(), sendMessageReq.getContent(), clientIp);
 
         ResponseDTO responseDTO = ResponseDTO.builder()
                 .status(SUCCESS)
@@ -89,7 +73,7 @@ public class MessageController {
             throw new UnAuthorizedException();
         }
 
-        boolean returnedIsActive = messageService.deleteMessage(messageId, user.getId());
+        boolean returnedIsActive = messageFacade.deleteMessage(messageId, user.getId());
         if (returnedIsActive) {
             throw new DeleteMessageFailException();
         }
@@ -112,7 +96,7 @@ public class MessageController {
             throw new UnAuthorizedException();
         }
 
-        Data data = messageService.reportMessage(messageId, user.getId(), reportReq.getContent());
+        Data data = messageFacade.reportMessage(messageId, user.getId(), reportReq.getContent());
         if (data == null) {
             throw new ReportFailException();
         }
@@ -136,7 +120,7 @@ public class MessageController {
             throw new UnAuthorizedException();
         }
 
-        Data returnedEmojiData = messageService.addEmoji(messageId, user.getId(), emojiId);
+        Data returnedEmojiData = messageFacade.addEmoji(messageId, user.getId(), emojiId);
         if (returnedEmojiData == null) {
             throw new EmojiFailException();
         }
