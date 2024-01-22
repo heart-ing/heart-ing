@@ -9,7 +9,7 @@ import org.springframework.data.repository.query.Param;
 
 import java.util.List;
 
-public interface HeartJPARepository extends JpaRepository<Heart, Long> {
+public interface HeartRepository extends JpaRepository<Heart, Long> {
 
     public List<Heart> findAllByType(String default_type);
 
