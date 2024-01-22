@@ -4,6 +4,7 @@ import com.chillin.hearting.api.data.SendMessageData;
 import com.chillin.hearting.api.request.ReportReq;
 import com.chillin.hearting.api.request.SendMessageReq;
 import com.chillin.hearting.api.service.MessageService;
+import com.chillin.hearting.api.service.facade.MessageFacade;
 import com.chillin.hearting.db.domain.User;
 import com.chillin.hearting.exception.*;
 import com.google.gson.Gson;
@@ -32,7 +33,7 @@ class MessageControllerTest {
     @InjectMocks
     private MessageController messageController;
     @Mock
-    private MessageService messageService;
+    private MessageFacade messageFacade;
     private MockMvc mockMvc;
     private Gson gson;
     private static final String SUCCESS = "success";
@@ -83,7 +84,7 @@ class MessageControllerTest {
                 .build();
 
         // Mock the behavior of messageService to throw a UserNotFoundException using doThrow().when()
-        doThrow(new UserNotFoundException()).when(messageService)
+        doThrow(new UserNotFoundException()).when(messageFacade)
                 .sendMessage(sendMessageReq.getHeartId(), sendMessageReq.getSenderId(), sendMessageReq.getReceiverId(), sendMessageReq.getTitle(), sendMessageReq.getContent(), "127.0.0.1");
 
         // when
@@ -120,7 +121,7 @@ class MessageControllerTest {
                 .heartId(sendMessageReq.getHeartId())
                 .build();
 
-        doReturn(expectedResponse).when(messageService).sendMessage(sendMessageReq.getHeartId(), sendMessageReq.getSenderId(), sendMessageReq.getReceiverId(), sendMessageReq.getTitle(), sendMessageReq.getContent(), "127.0.0.1");
+        doReturn(expectedResponse).when(messageFacade).sendMessage(sendMessageReq.getHeartId(), sendMessageReq.getSenderId(), sendMessageReq.getReceiverId(), sendMessageReq.getTitle(), sendMessageReq.getContent(), "127.0.0.1");
 
         // when
         final ResultActions resultActions = mockMvc.perform(
@@ -160,7 +161,7 @@ class MessageControllerTest {
         // given
         final String url = "/api/v1/messages/" + messageId;
         User user = User.builder().id("receiver").build();
-        doReturn(true).when(messageService).deleteMessage(messageId, "receiver");
+        doReturn(true).when(messageFacade).deleteMessage(messageId, "receiver");
 
         // when
         final ResultActions resultActions = mockMvc.perform(
@@ -182,7 +183,7 @@ class MessageControllerTest {
         final String url = "/api/v1/messages/" + messageId;
         User user = User.builder().id("sender").build();
         doThrow(new UnAuthorizedException("본인에게 온 메시지만 삭제할 수 있습니다."))
-                .when(messageService).deleteMessage(messageId, "sender");
+                .when(messageFacade).deleteMessage(messageId, "sender");
 
         // when
         final ResultActions resultActions = mockMvc.perform(
@@ -204,7 +205,7 @@ class MessageControllerTest {
         final String url = "/api/v1/messages/" + messageId;
         User user = User.builder().id("sender").build();
         doThrow(new MessageAlreadyDeletedException())
-                .when(messageService).deleteMessage(messageId, "sender");
+                .when(messageFacade).deleteMessage(messageId, "sender");
 
         // when
         final ResultActions resultActions = mockMvc.perform(
@@ -226,7 +227,7 @@ class MessageControllerTest {
         final String url = "/api/v1/messages/" + messageId;
         User user = User.builder().id("sender").build();
 
-        doReturn(false).when(messageService).deleteMessage(messageId, user.getId());
+        doReturn(false).when(messageFacade).deleteMessage(messageId, user.getId());
 
         // when
         final ResultActions resultActions = mockMvc.perform(
@@ -271,7 +272,7 @@ class MessageControllerTest {
         ReportReq reportReq = ReportReq.builder()
                 .content(content)
                 .build();
-        doReturn(null).when(messageService).reportMessage(messageId, "sender", content);
+        doReturn(null).when(messageFacade).reportMessage(messageId, "sender", content);
 
         // when
         final ResultActions resultActions = mockMvc.perform(
@@ -297,7 +298,7 @@ class MessageControllerTest {
                 .content(content)
                 .build();
         doThrow(new UnAuthorizedException("본인이 받은 메시지만 신고할 수 있습니다."))
-                .when(messageService).reportMessage(messageId, "sender", content);
+                .when(messageFacade).reportMessage(messageId, "sender", content);
 
         // when
         final ResultActions resultActions = mockMvc.perform(
@@ -323,7 +324,7 @@ class MessageControllerTest {
                 .content(content)
                 .build();
         doThrow(new MessageAlreadyReportedException())
-                .when(messageService).reportMessage(messageId, "sender", content);
+                .when(messageFacade).reportMessage(messageId, "sender", content);
 
         // when
         final ResultActions resultActions = mockMvc.perform(
@@ -350,7 +351,7 @@ class MessageControllerTest {
                 .content(content)
                 .build();
 
-        doReturn(reportId).when(messageService).reportMessage(messageId, user.getId(), reportReq.getContent());
+        doReturn(reportId).when(messageFacade).reportMessage(messageId, user.getId(), reportReq.getContent());
 
 
         // when
@@ -390,7 +391,7 @@ class MessageControllerTest {
         // given
         final String url = "/api/v1/messages/" + messageId + "/emojis/" + emojiId;
         User user = User.builder().id("sender").build();
-        doReturn(null).when(messageService).addEmoji(messageId, "sender", emojiId);
+        doReturn(null).when(messageFacade).addEmoji(messageId, "sender", emojiId);
 
         // when
         final ResultActions resultActions = mockMvc.perform(
@@ -412,7 +413,7 @@ class MessageControllerTest {
         final String url = "/api/v1/messages/" + messageId + "/emojis/" + emojiId;
         User user = User.builder().id("sender").build();
         doThrow(new UnAuthorizedException("본인이 받은 메시지에만 이모지를 달 수 있습니다."))
-                .when(messageService).addEmoji(messageId, "sender", emojiId);
+                .when(messageFacade).addEmoji(messageId, "sender", emojiId);
 
         // when
         final ResultActions resultActions = mockMvc.perform(
@@ -434,7 +435,7 @@ class MessageControllerTest {
         final String url = "/api/v1/messages/" + messageId + "/emojis/" + emojiId;
         User user = User.builder().id("sender").build();
 
-        doReturn(emojiId).when(messageService).addEmoji(messageId, user.getId(), emojiId);
+        doReturn(emojiId).when(messageFacade).addEmoji(messageId, user.getId(), emojiId);
 
         // when
         final ResultActions resultActions = mockMvc.perform(

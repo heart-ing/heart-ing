@@ -1,8 +1,9 @@
-package com.chillin.hearting.api.service;
+package com.chillin.hearting.api.service.facade;
 
 import com.chillin.hearting.api.data.EmojiData;
 import com.chillin.hearting.api.data.ReportData;
 import com.chillin.hearting.api.data.SendMessageData;
+import com.chillin.hearting.api.service.MessageService;
 import com.chillin.hearting.db.domain.*;
 import com.chillin.hearting.db.repository.*;
 import com.chillin.hearting.exception.*;
@@ -21,10 +22,10 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
-class MessageServiceTest {
+class MessageFacadeTest {
 
     @InjectMocks
-    private MessageService messageService;
+    private MessageFacade messageFacade;
 
     @Mock
     private UserRepository userRepository;
@@ -69,7 +70,7 @@ class MessageServiceTest {
         doReturn(Optional.empty()).when(userRepository).findById(receiverId);
 
         // when
-        UserNotFoundException exception = assertThrows(UserNotFoundException.class, () -> messageService.sendMessage(heartId, senderId, receiverId, title, content, senderIp));
+        UserNotFoundException exception = assertThrows(UserNotFoundException.class, () -> messageFacade.sendMessage(heartId, senderId, receiverId, title, content, senderIp));
 
         // then
         assertEquals(UserNotFoundException.DEFAULT_MESSAGE, exception.getMessage());
@@ -82,7 +83,7 @@ class MessageServiceTest {
         doReturn(Optional.empty()).when(userRepository).findById(senderId);
 
         // when
-        UserNotFoundException exception = assertThrows(UserNotFoundException.class, () -> messageService.sendMessage(heartId, senderId, receiverId, title, content, senderIp));
+        UserNotFoundException exception = assertThrows(UserNotFoundException.class, () -> messageFacade.sendMessage(heartId, senderId, receiverId, title, content, senderIp));
 
         // then
         assertEquals(UserNotFoundException.DEFAULT_MESSAGE, exception.getMessage());
@@ -96,7 +97,7 @@ class MessageServiceTest {
         doReturn(Optional.empty()).when(heartRepository).findById(heartId);
 
         // when
-        HeartNotFoundException exception = assertThrows(HeartNotFoundException.class, () -> messageService.sendMessage(heartId, senderId, receiverId, title, content, senderIp));
+        HeartNotFoundException exception = assertThrows(HeartNotFoundException.class, () -> messageFacade.sendMessage(heartId, senderId, receiverId, title, content, senderIp));
 
         // then
         assertEquals(HeartNotFoundException.DEFAULT_MESSAGE, exception.getMessage());
@@ -112,7 +113,7 @@ class MessageServiceTest {
         doReturn(Message.builder().id(0L).heart(heart).receiver(receiver).sender(sender).title(title).content(content).senderIp(senderIp).build()).when(messageRepository).save(any(Message.class));
 
         // when
-        final SendMessageData message = messageService.sendMessage(heartId, senderId, receiverId, title, content, senderIp);
+        final SendMessageData message = messageFacade.sendMessage(heartId, senderId, receiverId, title, content, senderIp);
 
         // then
         assertThat(message.getHeartName()).isEqualTo("testHeart");
@@ -131,7 +132,7 @@ class MessageServiceTest {
         doReturn(Optional.empty()).when(messageRepository).findById(messageId);
 
         // when
-        MessageNotFoundException exception = assertThrows(MessageNotFoundException.class, () -> messageService.deleteMessage(messageId, receiverId));
+        MessageNotFoundException exception = assertThrows(MessageNotFoundException.class, () -> messageFacade.deleteMessage(messageId, receiverId));
 
         // then
         assertEquals(MessageNotFoundException.DEFAULT_MESSAGE, exception.getMessage());
@@ -144,7 +145,7 @@ class MessageServiceTest {
         doReturn(Message.builder().id(0L).receiver(receiver).build()).when(messageRepository).save(any(Message.class));
 
         // when
-        boolean result = messageService.deleteMessage(messageId, receiverId);
+        boolean result = messageFacade.deleteMessage(messageId, receiverId);
 
         // then
         assertFalse(result);
@@ -161,7 +162,7 @@ class MessageServiceTest {
         doReturn(Report.builder().id(1L).build()).when(reportRepository).save(any(Report.class));
 
         // when
-        ReportData data = messageService.reportMessage(messageId, receiverId, content);
+        ReportData data = messageFacade.reportMessage(messageId, receiverId, content);
 
         // then
         assertNotNull(data);
@@ -185,7 +186,7 @@ class MessageServiceTest {
         String differentId = "differentId";
 
         // when
-        UnAuthorizedException exception = assertThrows(UnAuthorizedException.class, () -> messageService.reportMessage(messageId, differentId, content));
+        UnAuthorizedException exception = assertThrows(UnAuthorizedException.class, () -> messageFacade.reportMessage(messageId, differentId, content));
 
         // then
         assertEquals(exception.getMessage(), "본인이 받은 메시지만 신고할 수 있습니다.");
@@ -200,7 +201,7 @@ class MessageServiceTest {
         doReturn(Optional.of(receiver)).when(userRepository).findById(receiverId);
 
         // when
-        MessageAlreadyReportedException exception = assertThrows(MessageAlreadyReportedException.class, () -> messageService.reportMessage(messageId, receiverId, content));
+        MessageAlreadyReportedException exception = assertThrows(MessageAlreadyReportedException.class, () -> messageFacade.reportMessage(messageId, receiverId, content));
 
         // then
         assertEquals(exception.getMessage(), MessageAlreadyReportedException.DEFAULT_MESSAGE);
@@ -216,15 +217,15 @@ class MessageServiceTest {
         doReturn(message).when(messageRepository).save(any(Message.class));
 
         // when
-        EmojiData returned = messageService.addEmoji(messageId, receiverId, MessageServiceTest.this.emojiId);
+        EmojiData returned = messageFacade.addEmoji(messageId, receiverId, MessageFacadeTest.this.emojiId);
 
         // then
         assertNotNull(returned);
-        assertEquals(MessageServiceTest.this.emojiUrl, returned.getEmojiUrl());
+        assertEquals(MessageFacadeTest.this.emojiUrl, returned.getEmojiUrl());
 
         // verify
         verify(messageRepository, times(1)).findById(messageId);
-        verify(emojiRepository, times(1)).findById(MessageServiceTest.this.emojiId);
+        verify(emojiRepository, times(1)).findById(MessageFacadeTest.this.emojiId);
         verify(messageRepository, times(1)).save(any(Message.class));
     }
 
@@ -236,7 +237,7 @@ class MessageServiceTest {
         String differentId = "differentId";
 
         // when
-        UnAuthorizedException exception = assertThrows(UnAuthorizedException.class, () -> messageService.addEmoji(messageId, differentId, emojiId));
+        UnAuthorizedException exception = assertThrows(UnAuthorizedException.class, () -> messageFacade.addEmoji(messageId, differentId, emojiId));
 
         // then
         assertEquals(exception.getMessage(), "본인이 받은 메시지에만 이모지를 달 수 있습니다.");
