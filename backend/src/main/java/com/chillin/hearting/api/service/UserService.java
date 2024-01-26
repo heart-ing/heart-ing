@@ -27,6 +27,7 @@ import javax.servlet.http.HttpServletResponse;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.Date;
+import java.util.List;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -286,5 +287,17 @@ public class UserService {
         CookieUtil.deleteCookie(httpServletRequest, httpServletResponse, REFRESH_TOKEN);
     }
 
+    @Transactional(readOnly = true)
+    public User findById(String userId) {
+        return userRepository.findById(userId).orElseThrow(UserNotFoundException::new);
+    }
 
+    @Transactional
+    public User save(User user) {
+        return userRepository.save(user);
+    }
+
+    public List<User> findAll() {
+        return userRepository.findAll();
+    }
 }

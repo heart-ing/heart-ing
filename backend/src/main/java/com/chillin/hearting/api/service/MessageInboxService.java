@@ -3,7 +3,6 @@ package com.chillin.hearting.api.service;
 import com.chillin.hearting.api.data.InboxData;
 import com.chillin.hearting.db.domain.Message;
 import com.chillin.hearting.db.repository.InboxRepository;
-import com.chillin.hearting.db.repository.UserRepository;
 import com.chillin.hearting.exception.MessageAlreadyExpiredException;
 import com.chillin.hearting.exception.MessageNotFoundException;
 import lombok.RequiredArgsConstructor;
@@ -23,7 +22,6 @@ import java.util.stream.Collectors;
 public class MessageInboxService {
 
     private final InboxRepository inboxRepository;
-    private final UserRepository userRepository;
 
     @Transactional
     public void storeMessage(Long messageId) {

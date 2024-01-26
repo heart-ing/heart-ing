@@ -4,6 +4,7 @@ import com.chillin.hearting.db.domain.UserHeart;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.List;
+import java.util.Optional;
 
 public interface UserHeartRepository extends JpaRepository<UserHeart, Long> {
 
@@ -11,5 +12,5 @@ public interface UserHeartRepository extends JpaRepository<UserHeart, Long> {
 
     List<UserHeart> findAllByUserIdOrderByHeartId(String userId);
 
-    List<UserHeart> findByHeartIdAndUserId(Long heartId, String userId);
+    Optional<UserHeart> findByHeartIdAndUserId(Long heartId, String userId);
 }

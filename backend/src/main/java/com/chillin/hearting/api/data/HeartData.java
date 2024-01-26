@@ -18,19 +18,19 @@ public class HeartData implements Data {
     private String type;
     @Builder.Default
     @Getter(onMethod_ = {@JsonProperty("isLocked")})
-    private Boolean isLocked = true;
+    private Boolean isLocked = false;
     @Getter(onMethod_ = {@JsonProperty("isAcq")})
     private Boolean isAcq;
 
 
-    public static HeartData of(Heart heart, boolean isLocked) {
+    public static HeartData of(Heart heart) {
         return HeartData.builder()
                 .heartId(heart.getId())
                 .name(heart.getName())
-                .heartUrl((isLocked) ? getLockedUrl() : heart.getImageUrl())
+                .heartUrl(heart.getImageUrl())
                 .shortDescription(heart.getShortDescription())
                 .type(heart.getType())
-                .isLocked(isLocked)
+                .isLocked(false)
                 .build();
     }
 
@@ -39,8 +39,8 @@ public class HeartData implements Data {
     }
 
     public void setLock() {
-//        this.heartUrl = getLockedUrl();
         this.isLocked = true;
+        this.heartUrl = getLockedUrl();
     }
 
     private static String getLockedUrl() {

@@ -3,6 +3,7 @@ package com.chillin.hearting.api.service;
 import com.chillin.hearting.api.data.SocialLoginBeforeTokenIssueData;
 import com.chillin.hearting.api.data.SocialLoginData;
 import com.chillin.hearting.api.data.TwitterRedirectData;
+import com.chillin.hearting.api.service.facade.MessageFacade;
 import com.chillin.hearting.db.domain.BlockedUser;
 import com.chillin.hearting.db.domain.User;
 import com.chillin.hearting.db.repository.BlockedUserRepository;
@@ -72,7 +73,7 @@ public class OAuthService {
     private final Environment environment;
     private final UserService userService;
     private final MigrationService migrationService;
-    private final MessageService messageService;
+    private final MessageFacade messageFacade;
 
     private final RedisTemplate<String, Object> redisTemplate;
 
@@ -451,7 +452,7 @@ public class OAuthService {
                 migrationService.migrateUserSentHeart(socialUser.getId());
                 migrationService.migrateUserReceivedHeart(socialUser.getId());
 
-                messageService.sendMessage(7L, null, socialUser.getId(), "환영합니다!\uD83D\uDC95", "안녕하세요!( >ᴗ< )\n" +
+                messageFacade.sendMessage(7L, null, socialUser.getId(), "환영합니다!\uD83D\uDC95", "안녕하세요!( >ᴗ< )\n" +
                         "하팅 개발진의 감사한 마음을 \n" +
                         "모두 모아 첫 번째 하트를 \n" +
                         "보냅니다.❤\uFE0F\uD83D\uDC9B\uD83D\uDC9A\uD83D\uDC99\uD83D\uDC9C\n" +
@@ -459,7 +460,7 @@ public class OAuthService {
                         "감정을 담아 주고받아 보세요.\n" +
                         "하팅!", "ADMIN");
 
-                messageService.sendScheduledMessages(socialUser);
+                messageFacade.sendScheduledMessages(socialUser);
             }
 
             AuthToken accessToken = userService.makeAccessToken(socialUser.getId());

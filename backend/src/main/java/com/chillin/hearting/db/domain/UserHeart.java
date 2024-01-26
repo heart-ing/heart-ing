@@ -6,6 +6,7 @@ import lombok.extern.slf4j.Slf4j;
 import javax.persistence.*;
 import java.io.Serializable;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 
 @Slf4j
 @Entity
@@ -13,6 +14,7 @@ import java.time.LocalDateTime;
 @AllArgsConstructor
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @ToString
+@Builder
 public class UserHeart implements Serializable {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY) // auto-increment
@@ -29,10 +31,11 @@ public class UserHeart implements Serializable {
     @Column(name = "created_date", nullable = false)
     private LocalDateTime createdDate;
 
-    @Builder
-    public UserHeart(User user, Heart heart) {
-        this.user = user;
-        this.heart = heart;
+    public static UserHeart of(User user, Heart heart) {
+        return UserHeart.builder()
+                .user(user)
+                .heart(heart)
+                .createdDate(LocalDateTime.now(ZoneId.of("Asia/Seoul")))
+                .build();
     }
-
 }

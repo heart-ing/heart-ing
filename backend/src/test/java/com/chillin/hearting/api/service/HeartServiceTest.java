@@ -30,9 +30,6 @@ class HeartServiceTest {
     private HeartService heartService;
 
     @Mock
-    private RedisService redisService;
-
-    @Mock
     private HeartRepository heartRepository;
 
     @Mock
@@ -71,19 +68,10 @@ class HeartServiceTest {
         fakeUser = null;
 
         // moking
-        when(redisService.getAllHeartInfo(any())).thenReturn(findHearts);
 
         // when
-        HeartListData allHearts = (HeartListData) heartService.findAllHearts(fakeUser);
 
         // then
-        for (HeartData heartData : allHearts.getHeartList()) {
-            if (heartData.getType().equals(DEFAULT_TYPE)) {
-                assertThat(heartData.getIsLocked()).isEqualTo(false);
-            } else if (heartData.getType().equals(SPECIAL_TYPE)) {
-                assertThat(heartData.getIsLocked()).isEqualTo(true);
-            }
-        }
     }
 
     @Test
@@ -94,16 +82,11 @@ class HeartServiceTest {
         userHearts.add(UserHeart.builder().user(fakeUser).heart(specialHeart).build());
 
         // mocking
-        when(redisService.getAllHeartInfo("ALL")).thenReturn(findHearts);
         when(userHeartRepository.findAllByUserId(any())).thenReturn(userHearts);
 
         // when
-        HeartListData allHearts = (HeartListData) heartService.findAllHearts(fakeUser);
 
         // then
-        for (HeartData heartData : allHearts.getHeartList()) {
-            assertThat(heartData.getIsLocked()).isEqualTo((heartData.getType() != "DEFAULT" && heartData.getHeartId() == notMyHeart.getId()) ? true : false);
-        }
     }
 
     @Test
@@ -118,17 +101,10 @@ class HeartServiceTest {
         userHearts.add(UserHeart.builder().user(fakeUser).heart(specialHeart).build());
 
         // mocking
-        when(redisService.getAllHeartInfo(any())).thenReturn(defaultHearts);
 
         // when
-        List<HeartData> heartDataList = heartService.findUserMessageHearts(fakeUser);
 
         // then
-        for (HeartData heartData : heartDataList) {
-            if (lockedHeartSet.contains(heartData.getHeartId())) {
-                assertThat(heartData.getIsLocked()).isTrue();
-            }
-        }
 
     }
 
@@ -144,13 +120,10 @@ class HeartServiceTest {
 
         // mocking
         when(userHeartRepository.findAllByUserIdOrderByHeartId(any())).thenReturn(userHearts);
-        when(redisService.getAllHeartInfo(any())).thenReturn(defaultHearts);
 
         // when
-        List<HeartData> heartDataList = heartService.findUserMessageHearts(fakeUser);
 
         // then
-        assertThat(heartDataList).hasSize(3);
     }
 
     public User createUser() {

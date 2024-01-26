@@ -2,7 +2,7 @@ package com.chillin.hearting.api.controller;
 
 import com.chillin.hearting.api.data.HeartData;
 import com.chillin.hearting.api.data.HeartListData;
-import com.chillin.hearting.api.service.HeartService;
+import com.chillin.hearting.api.service.facade.HeartFacade;
 import com.chillin.hearting.db.domain.Heart;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -33,7 +33,7 @@ public class HeartControllerTest {
     private HeartController heartController;
 
     @Mock
-    private HeartService heartService;
+    private HeartFacade heartFacade;
 
     private MockMvc mockMvc;
 
@@ -64,14 +64,14 @@ public class HeartControllerTest {
         // given
         final String url = "/api/v1/hearts";
         List<HeartData> heartDataList = new ArrayList<>();
-        heartDataList.add(HeartData.of(createDefaultHeart(1L), false));
-        heartDataList.add(HeartData.of(createSpecialHeart(7L), true));
+        heartDataList.add(HeartData.of(createDefaultHeart(1L)));
+        heartDataList.add(HeartData.of(createSpecialHeart(7L)));
         HeartListData data = HeartListData.builder()
                 .heartList(heartDataList)
                 .build();
 
         // mocking
-        when(heartService.findAllHearts(any())).thenReturn(data);
+        when(heartFacade.findAllHearts(any())).thenReturn(data);
 
         // when
         final ResultActions resultActions = mockMvc.perform(
@@ -109,11 +109,11 @@ public class HeartControllerTest {
         // given
         final String url = "/api/v1/hearts/user-hearts";
         List<HeartData> heartDataList = new ArrayList<>();
-        heartDataList.add(HeartData.of(createDefaultHeart(1L), false));
-        heartDataList.add(HeartData.of(createSpecialHeart(6L), false));
+        heartDataList.add(HeartData.of(createDefaultHeart(1L)));
+        heartDataList.add(HeartData.of(createSpecialHeart(6L)));
 
         // mocking
-        when(heartService.findUserMessageHearts(any())).thenReturn(heartDataList);
+        when(heartFacade.findMessageHearts(any())).thenReturn(heartDataList);
 
         // when
         final ResultActions resultActions = mockMvc.perform(
