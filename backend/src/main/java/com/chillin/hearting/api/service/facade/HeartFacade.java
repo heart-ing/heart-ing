@@ -61,7 +61,7 @@ public class HeartFacade {
 
     private List<HeartData> findAllHeartDataWithUser(User user) {
         List<HeartData> result = new ArrayList<>();
-        for (Heart heart : heartService.findAllTypeHearts()) {
+        for (Heart heart : heartService.findAll()) {
             HeartData heartData = HeartData.of(heart);
             result.add(heartData);
             if (HeartType.isDefault(heart.getType())) continue;
