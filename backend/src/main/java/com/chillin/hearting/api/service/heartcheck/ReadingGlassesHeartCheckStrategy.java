@@ -33,7 +33,7 @@ public class ReadingGlassesHeartCheckStrategy implements HeartCheckStrategy {
         ArrayList<HeartConditionData> result = new ArrayList<>();
 
         Heart heart = heartService.findById(HeartInfo.PINK.getId());
-        int sentHeartCnt = heartService.getUserSentHeartCnt(userId, HeartInfo.PINK.getId());
+        int sentHeartCnt = messageService.getUserSentHeartCnt(userId, HeartInfo.PINK.getId());
         result.add(
                 HeartConditionData.of(heart,sentHeartCnt,HEART_READING_GLASSES_MAX_VALUE)
         );

@@ -15,21 +15,21 @@ public class HeartCheckStrategyFactory {
             case 6:
                 return new PlanetHeartCheckStrategy();
             case 7:
-                return new RainbowHeartCheckStrategy(heartService);
+                return new RainbowHeartCheckStrategy(heartService, messageService);
             case 8:
-                return new MinchoHeartCheckStrategy(heartService);
+                return new MinchoHeartCheckStrategy(heartService, messageService);
             case 9:
-                return new SunnyHeartCheckStrategy(heartService);
+                return new SunnyHeartCheckStrategy(heartService, messageService);
             case 10:
                 return new ReadingGlassesHeartCheckStrategy(heartService, messageService);
             case 11:
-                return new IceCreamHeartCheckStrategy(heartService);
+                return new IceCreamHeartCheckStrategy(heartService, messageService);
             case 12:
-                return new ShamrockHeartCheckStrategy(heartService);
+                return new ShamrockHeartCheckStrategy(heartService, messageService);
             case 13:
-                return new FourLeafHeartCheckStrategy(heartService);
+                return new FourLeafHeartCheckStrategy(heartService, messageService);
             case 14:
-                return new NoirHeartCheckStrategy(heartService);
+                return new NoirHeartCheckStrategy(heartService, messageService);
             case 15:
                 return new CarnationHeartCheckStrategy();
 

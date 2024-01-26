@@ -34,6 +34,7 @@ public class MessageFacade {
     private final ReportUserService reportUserService;
     private final EmojiService emojiService;
     private final MessageService messageService;
+    private final MigrationService migrationService;
 
     private static class Sample {
         String title, content;
@@ -139,14 +140,14 @@ public class MessageFacade {
 
         // receiver 하트 획득 조건 체크
         log.info("receiver 하트 획득 조건 체크");
-        heartService.updateReceivedHeartCount(receiverId, heartId);
+        migrationService.updateReceivedHeartCount(receiverId, heartId);
 
         sendSpecialHeartNotificationAfterMessage(receiverId);
 
         // sender 하트 획득 조건 체크 + 알림 필요한지 체크
         log.info("sender 하트 획득 조건 체크");
         if (senderId != null) {
-            heartService.updateSentHeartCount(senderId, heartId);
+            migrationService.updateSentHeartCount(senderId, heartId);
             sendSpecialHeartNotificationAfterMessage(senderId);
         }
 
