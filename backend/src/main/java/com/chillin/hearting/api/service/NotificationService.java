@@ -19,7 +19,6 @@ import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 
 @Slf4j
@@ -89,11 +88,6 @@ public class NotificationService {
     }
 
     @Transactional(readOnly = true)
-    public List<Notification> findByUserIdAndIsActiveTrue(String userId, Sort sort) {
-        return notificationRepository.findByUserIdAndIsActiveTrue(userId, sort);
-    }
-
-    @Transactional(readOnly = true)
     public Notification save(Notification notification) {
         return notificationRepository.save(notification);
     }
@@ -122,7 +116,7 @@ public class NotificationService {
     }
 
     @Transactional(readOnly = true)
-    public Optional<Notification> findById(Long notificationId) {
-        return notificationRepository.findById(notificationId);
+    public Notification findById(Long notificationId) {
+        return notificationRepository.findById(notificationId).orElseThrow(NotificationNotFoundException::new);
     }
 }
