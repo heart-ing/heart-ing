@@ -1,30 +1,24 @@
 package com.chillin.hearting.api.service;
 
-import com.chillin.hearting.api.data.HeartData;
-import com.chillin.hearting.api.data.HeartListData;
+import com.chillin.hearting.api.service.enums.HeartType;
 import com.chillin.hearting.db.domain.Heart;
-import com.chillin.hearting.db.domain.User;
-import com.chillin.hearting.db.domain.UserHeart;
 import com.chillin.hearting.db.repository.HeartRepository;
-import com.chillin.hearting.db.repository.UserHeartRepository;
-import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashSet;
 import java.util.List;
+import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.when;
+import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.Mockito.doReturn;
 
 @ExtendWith(MockitoExtension.class)
-class HeartServiceTest {
+class HeartServiceTest extends AbstractTestData {
 
     @InjectMocks
     private HeartService heartService;
@@ -32,151 +26,57 @@ class HeartServiceTest {
     @Mock
     private HeartRepository heartRepository;
 
-    @Mock
-    private UserHeartRepository userHeartRepository;
+    @Test
+    @DisplayName("모든 타입 하트 조회")
+    void findAll() {
+        // given
+        doReturn(heartList).when(heartRepository).findAll();
 
-    private List<Heart> findHearts;
-    private List<UserHeart> userHearts;
-    private User fakeUser;
-    private Heart defaultHeart;
-    private Heart defaultAndLockedHeart;
-    private Heart specialHeart;
-    private Heart notMyHeart;
+        // when
+        List<Heart> findHeartList = heartService.findAll();
 
-    private static final String DEFAULT_TYPE = "DEFAULT";
-    private static final String SPECIAL_TYPE = "SPECIAL";
-    private static final HashSet<Long> lockedHeartSet = new HashSet<>(Arrays.asList(4L, 5L));
-
-    @BeforeEach
-    public void 데이터생성() {
-        findHearts = new ArrayList<>();
-        defaultHeart = createDefaultHeart(1L);
-        defaultAndLockedHeart = createDefaultHeart(4L);
-        specialHeart = createSpecialHeart(6L);
-        notMyHeart = createNotMySpecialHeart(7L);
-        findHearts.add(defaultHeart);
-        findHearts.add(specialHeart);
-        findHearts.add(notMyHeart);
-
-        userHearts = new ArrayList<>();
+        // then
+        assertThat(findHeartList).filteredOn("type",HeartType.DEFAULT.name()).containsOnly(like,friendship,cheer,flutter,love);
+        assertThat(findHeartList).filteredOn("type",HeartType.SPECIAL.name()).containsOnly(rainbow,mincho,sunny,readingGlasses,iceCream,shamrock,fourLeaf,noir);
+        assertThat(findHeartList).filteredOn("type",HeartType.EVENT.name()).containsOnly(planet,carnation);
     }
 
     @Test
-    void 도감조회_비로그인() {
-
+    @DisplayName("모든 기본 타입 하트 조회")
+    void findDefaultTypeHearts() {
         // given
-        fakeUser = null;
-
-        // moking
+        doReturn(defaultHeartList).when(heartRepository).findAllByType(HeartType.DEFAULT.name());
 
         // when
+        List<Heart> findHeartList = heartService.findDefaultTypeHearts();
 
         // then
+        assertThat(findHeartList).containsOnly(like,friendship,cheer,flutter,love);
     }
 
     @Test
-    void 도감조회_로그인() {
-
+    @DisplayName("모든 스페셜 타입 하트 조회")
+    void findSpecialTypeHearts() {
         // given
-        fakeUser = createUser();
-        userHearts.add(UserHeart.builder().user(fakeUser).heart(specialHeart).build());
-
-        // mocking
-        when(userHeartRepository.findAllByUserId(any())).thenReturn(userHearts);
+        doReturn(specialHeartList).when(heartRepository).findAllByType(HeartType.SPECIAL.name());
 
         // when
+        List<Heart> findHeartList = heartService.findSpecialTypeHearts();
 
         // then
+        assertThat(findHeartList).containsOnly(rainbow,mincho,sunny,readingGlasses,iceCream,shamrock,fourLeaf,noir);
     }
 
     @Test
-    void 유저하트조회_비로그인() {
-
+    @DisplayName("하트 아이디로 조회")
+    void findById() {
         // given
-        fakeUser = null;
-        List<Heart> defaultHearts = new ArrayList<>();
-        defaultHearts.add(defaultHeart);
-        defaultHearts.add(defaultAndLockedHeart);
-
-        userHearts.add(UserHeart.builder().user(fakeUser).heart(specialHeart).build());
-
-        // mocking
+        doReturn(Optional.of(like)).when(heartRepository).findById(anyLong());
 
         // when
+        Heart findHeart = heartService.findById(1L);
 
         // then
-
+        assertThat(findHeart).isEqualTo(like);
     }
-
-    @Test
-    void 유저하트조회_로그인() {
-        // given
-        fakeUser = createUser();
-        List<Heart> defaultHearts = new ArrayList<>();
-        defaultHearts.add(defaultHeart);
-        defaultHearts.add(defaultAndLockedHeart);
-
-        userHearts.add(UserHeart.builder().user(fakeUser).heart(specialHeart).build());
-
-        // mocking
-        when(userHeartRepository.findAllByUserIdOrderByHeartId(any())).thenReturn(userHearts);
-
-        // when
-
-        // then
-    }
-
-    public User createUser() {
-        User user = User.builder()
-                .id("test123")
-                .type("ROLE_TEST")
-                .email("test-email.com")
-                .nickname("test-nick")
-                .build();
-        return user;
-    }
-
-    public Heart createDefaultHeart(Long id) {
-        Heart heart = Heart.builder()
-                .id(id)
-                .name("호감 하트")
-                .imageUrl("test.com")
-                .shortDescription("짧은 설명 !")
-                .longDescription("호감의 탄생 스토리")
-                .acqCondition("기본 제공")
-                .type("DEFAULT")
-                .build();
-
-        return heart;
-    }
-
-    public Heart createSpecialHeart(Long id) {
-        Heart heart = Heart.builder()
-                .id(id)
-                .name("행성 하트")
-                .imageUrl("universe.com")
-                .shortDescription("우주에 단 하나 뿐인 너 !")
-                .longDescription("우주의 탄생 스토리")
-                .acqCondition("특정인에게 5회 이상 메시지 전송")
-                .type("SPECIAL")
-                .build();
-
-        return heart;
-    }
-
-    public Heart createNotMySpecialHeart(Long id) {
-        Heart heart = Heart.builder()
-                .id(id)
-                .name("민초 하트")
-                .imageUrl("mint-choco.com")
-                .shortDescription("mint !")
-                .longDescription("mint story")
-                .acqCondition("mint mint !!")
-                .type("SPECIAL")
-                .build();
-
-        return heart;
-    }
-
-
 }
