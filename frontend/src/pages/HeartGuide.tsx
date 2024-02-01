@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { getAllHeartInfo, getHeartDetailInfo } from "../features/api/guideApi";
-import { useRecoilValue } from "recoil";
-import { openDetailInfoAtom } from "../atoms/guideAtoms";
+import { useRecoilState, useRecoilValue } from "recoil";
+import { heartDetailInfoAtom, openDetailInfoAtom } from "../atoms/guideAtoms";
 import { IHeartInfoTypes, IHeartDetailInfoTypes } from "../types/guideType";
 import HeartGuideList from "../components/heartGuide/HeartGuideList";
 import HeartGuideDetailInfo from "../components/heartGuide/HeartGuideDetailInfo";
@@ -12,7 +12,7 @@ function HeartGuide() {
     []
   );
   const [heartDetailInfo, setHeartDetailInfo] =
-    useState<IHeartDetailInfoTypes | null>(null);
+    useRecoilState<IHeartDetailInfoTypes | null>(heartDetailInfoAtom);
   const openDetailInfo = useRecoilValue(openDetailInfoAtom);
 
   async function getHeartData() {
@@ -45,7 +45,7 @@ function HeartGuide() {
         ) : null}
       </div>
       {openDetailInfo ? (
-        <HeartGuideDetailInfo heartDetailInfo={heartDetailInfo} />
+        <HeartGuideDetailInfo />
       ) : null}
     </div>
   );
