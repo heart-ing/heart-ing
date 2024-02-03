@@ -43,8 +43,8 @@ class UserHeartServiceTest extends AbstractTestData {
     }
 
     @Test
-    @DisplayName("스페셜 하트 획득 여부 확인")
-    void isUserAcquiredHeart() {
+    @DisplayName("획득한 스페셜 하트")
+    void isUserAcquiredHeartTrue() {
         // given
         long heartId = 1L;
         String userId = "userId";
@@ -55,6 +55,20 @@ class UserHeartServiceTest extends AbstractTestData {
 
         // then
         assertThat(result).isTrue();
+    }
+
+    @Test
+    @DisplayName("획득 못한 스페셜 하트")
+    void isUserAcquiredHeartFalse() {
+        // given
+        long heartId = 1L;
+        String userId = "userId";
+        doReturn(Optional.empty()).when(userHeartRepository).findByHeartIdAndUserId(eq(heartId),eq(userId));
+        // when
+        boolean result = userHeartService.isUserAcquiredHeart(userId,heartId);
+
+        // then
+        assertThat(result).isFalse();
     }
 
     @Test
