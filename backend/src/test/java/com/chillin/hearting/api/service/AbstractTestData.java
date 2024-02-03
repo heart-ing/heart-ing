@@ -2,7 +2,6 @@ package com.chillin.hearting.api.service;
 
 import com.chillin.hearting.api.service.enums.HeartType;
 import com.chillin.hearting.db.domain.*;
-import org.junit.jupiter.api.BeforeAll;
 import org.springframework.data.redis.core.Cursor;
 import org.springframework.data.redis.core.HashOperations;
 import org.springframework.data.redis.core.RedisOperations;
@@ -10,45 +9,43 @@ import org.springframework.data.redis.core.ScanOptions;
 
 import java.time.LocalDateTime;
 import java.util.*;
-
 public class AbstractTestData {
 
-    protected static Heart like;
-    protected static Heart cheer;
-    protected static Heart friendship;
-    protected static Heart flutter;
-    protected static Heart love;
-    protected static Heart planet;
-    protected static Heart rainbow;
-    protected static Heart mincho;
-    protected static Heart sunny;
-    protected static Heart readingGlasses;
-    protected static Heart iceCream;
-    protected static Heart shamrock;
-    protected static Heart fourLeaf;
-    protected static Heart noir;
-    protected static Heart carnation;
-    protected static List<Heart> heartList = new ArrayList<>();
-    protected static List<Heart> defaultHeartList = new ArrayList<>();
-    protected static List<Heart> specialHeartList = new ArrayList<>();
-    protected static List<Heart> eventHeartList = new ArrayList<>();
+    protected Heart like;
+    protected Heart cheer;
+    protected Heart friendship;
+    protected Heart flutter;
+    protected Heart love;
+    protected Heart planet;
+    protected Heart rainbow;
+    protected Heart mincho;
+    protected Heart sunny;
+    protected Heart readingGlasses;
+    protected Heart iceCream;
+    protected Heart shamrock;
+    protected Heart fourLeaf;
+    protected Heart noir;
+    protected Heart carnation;
+    protected List<Heart> heartList = new ArrayList<>();
+    protected List<Heart> defaultHeartList = new ArrayList<>();
+    protected List<Heart> specialHeartList = new ArrayList<>();
+    protected List<Heart> eventHeartList = new ArrayList<>();
 
-    protected static User sender;
-    protected static User receiver;
+    protected User sender;
+    protected User receiver;
 
-    protected static Message message;
+    protected Message message;
 
-    protected static Emoji likeEmoji;
-    protected static Emoji zzEmoji;
-    protected static Emoji bestEmoji;
-    protected static Emoji sadEmoji;
-    protected static Emoji checkEmoji;
+    protected Emoji likeEmoji;
+    protected Emoji zzEmoji;
+    protected Emoji bestEmoji;
+    protected Emoji sadEmoji;
+    protected Emoji checkEmoji;
 
     protected Long notExistHeartId;
     protected Long existHeartId;
 
-    @BeforeAll
-    static void setupOnlyOnce() {
+    public AbstractTestData() {
         // Default Type
         like = createHeart(1L, "호감", HeartType.DEFAULT.name());
         cheer = createHeart(2L, "응원", HeartType.DEFAULT.name());
@@ -118,15 +115,15 @@ public class AbstractTestData {
         message = createMessage(1L,like,sender,receiver,likeEmoji);
     }
 
-    protected static Emoji createEmoji(long id, String name) {
+    protected Emoji createEmoji(long id, String name) {
         return Emoji.builder().id(id).name(name).imageUrl(name).build();
     }
 
-    protected static Emoji createEmoji(String name) {
+    protected Emoji createEmoji(String name) {
         return Emoji.builder().name(name).imageUrl(name).build();
     }
 
-    protected static Heart createHeart(long id, String name, String type) {
+    protected Heart createHeart(long id, String name, String type) {
         Heart heart = Heart.builder()
                 .id(id)
                 .name(name)
@@ -140,7 +137,7 @@ public class AbstractTestData {
         return heart;
     }
 
-    protected static Heart createHeart(String name, String type) {
+    protected Heart createHeart(String name, String type) {
         Heart heart = Heart.builder()
                 .name(name)
                 .imageUrl(name)
@@ -153,17 +150,18 @@ public class AbstractTestData {
         return heart;
     }
 
-    protected static User createUser(String id) {
+    protected User createUser(String id) {
         User user = User.builder()
                 .id(id)
                 .type(id)
                 .email(id)
                 .nickname(id)
+                .messageTotal(0L)
                 .build();
         return user;
     }
 
-    protected static Message createMessage(Long id, Heart heart, User sender, User receiver, Emoji emoji) {
+    protected Message createMessage(Long id, Heart heart, User sender, User receiver, Emoji emoji) {
         return Message.builder()
                 .id(id)
                 .title("title")
@@ -174,7 +172,7 @@ public class AbstractTestData {
                 .build();
     }
 
-    protected static Notification createNotification(User user, Message message, Heart heart, LocalDateTime dateTime) {
+    protected Notification createNotification(User user, Message message, Heart heart, LocalDateTime dateTime) {
         return Notification.builder()
                 .user(user)
                 .message(message)
