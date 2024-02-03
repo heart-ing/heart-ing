@@ -38,7 +38,7 @@ public class UserHeartRepositoryTest {
     @Test
     public void 유저획득하트조회() {
         // given
-        UserHeart userHeart = UserHeart.builder().user(savedUser).heart(savedSpecialHeart).build();
+        UserHeart userHeart = UserHeart.of(savedUser,savedSpecialHeart);
         UserHeart savedUserHeart = userHeartRepository.save(userHeart);
 
         // when
