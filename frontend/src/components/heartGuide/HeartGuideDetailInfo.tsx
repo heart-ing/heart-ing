@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 
-import { useSetRecoilState } from "recoil";
-import { openDetailInfoAtom } from "../../atoms/guideAtoms";
+import { useRecoilState, useSetRecoilState } from "recoil";
+import { heartDetailInfoAtom, openDetailInfoAtom } from "../../atoms/guideAtoms";
 import { IHeartDetailInfoTypes } from "../../types/guideType";
 import { acquireHeart } from "../../features/api/guideApi";
 import { ReactComponent as HeartLock } from "../../assets/images/pixel/heart/heart_lock_1.svg";
@@ -9,29 +9,33 @@ import HeartGuideDetailInfoAcqCondition from "./HeartGuideDetailInfoAcqCondition
 import HeartGuideDetailInfoStory from "./HeartGuideDetailInfoStory";
 import ButtonIcon from "../common/ButtonIcon";
 
-interface HeartGuideDetailInfoProps {
-  heartDetailInfo: IHeartDetailInfoTypes | null;
-}
-
-function HeartGuideDetailInfo({ heartDetailInfo }: HeartGuideDetailInfoProps) {
-  const [heartId, setHeartId] = useState(0);
+function HeartGuideDetailInfo() {
+  const [heartDetailInfo, setHeartDetailInfo] = useRecoilState(heartDetailInfoAtom)
   const setOpenDetailInfoAtom = useSetRecoilState(openDetailInfoAtom);
 
   useEffect(() => {
-    if (heartDetailInfo) setHeartId(heartDetailInfo.heartId);
-  }, [heartDetailInfo]);
+    return () => {
+      setHeartDetailInfo(null)
+    }
+  }, []);
+
+  if (!heartDetailInfo) {
+    return null;
+  }
 
   const closeModal = () => {
     setOpenDetailInfoAtom(false);
   };
 
   const onAcquireHandler = async (e: React.MouseEvent<HTMLDivElement>) => {
-    const data = await acquireHeart(heartId);
-    if (data.status === "success") {
-      alert("하트를 획득했습니다.");
-      window.location.reload();
-    } else {
-      window.location.reload();
+    if (heartDetailInfo) {
+      const data = await acquireHeart(heartDetailInfo.heartId);
+      if (data.status === "success") {
+        alert("하트를 획득했습니다.");
+        window.location.reload();
+      } else {
+        window.location.reload();
+      }
     }
   };
 
@@ -67,7 +71,7 @@ function HeartGuideDetailInfo({ heartDetailInfo }: HeartGuideDetailInfoProps) {
                 <div className="text-2xl cursor-default">
                   {heartDetailInfo.heartId === 14 && heartDetailInfo.isLocked ? "??"
                     :
-                  heartDetailInfo.name}
+                    heartDetailInfo.name}
                   하트</div>
                 <div className="mt-4">
                   <HeartGuideDetailInfoStory
