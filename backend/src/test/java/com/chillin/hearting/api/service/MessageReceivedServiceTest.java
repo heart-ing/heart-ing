@@ -2,6 +2,7 @@ package com.chillin.hearting.api.service;
 
 import com.chillin.hearting.api.data.MessageData;
 import com.chillin.hearting.api.data.ReceivedMessageData;
+import com.chillin.hearting.db.domain.Emoji;
 import com.chillin.hearting.db.domain.Heart;
 import com.chillin.hearting.db.domain.Message;
 import com.chillin.hearting.db.domain.User;
@@ -33,7 +34,6 @@ class MessageReceivedServiceTest {
     private MessageReceivedService messageReceivedService;
     @Mock
     private MessageRepository messageRepository;
-    private final long heartId = 0L;
     private final String senderId = "senderId";
     private final String receiverId = "receiverId";
     private final long messageId = 0L;
@@ -81,6 +81,54 @@ class MessageReceivedServiceTest {
         verify(messageRepository, times(2)).save(any(Message.class));
     }
 
+    @Test
+    void successGetReceivedMessagesWithEmoji() {
+        // given
+        List<Message> messageList = new ArrayList<>();
+        Emoji emoji = Emoji.builder().id(1L).name("name").imageUrl("url").build();
+        Message message1 = Message.builder().id(0L).heart(heart).receiver(receiver).emoji(emoji).expiredDate(LocalDateTime.now(ZoneId.of("Asia/Seoul")).plusDays(3)).build();
+
+        message1.undeleteMessage();
+
+        messageList.add(message1);
+
+        doReturn(messageList).when(messageRepository).findByReceiverIdAndIsActiveTrue(receiverId, Sort.by(Sort.Direction.DESC, "createdDate"));
+
+        // when
+        final ReceivedMessageData data = messageReceivedService.getReceivedMessages(receiverId, true);
+
+        // then
+        assertThat(data.getMessageList().size()).isEqualTo(messageList.size());
+        assertThat(data.getMessageList().get(0).getEmojiId()).isEqualTo(emoji.getId());
+        assertThat(data.getMessageList().get(0).getEmojiName()).isEqualTo(emoji.getName());
+        assertThat(data.getMessageList().get(0).getEmojiUrl()).isEqualTo(emoji.getImageUrl());
+
+        // verify
+        verify(messageRepository, times(1)).findByReceiverIdAndIsActiveTrue(receiverId, Sort.by(Sort.Direction.DESC, "createdDate"));
+    }
+
+    @Test
+    void successGetReceivedMessagesNoLogin() {
+        // given
+        List<Message> messageList = new ArrayList<>();
+        Message message1 = Message.builder().id(0L).heart(heart).receiver(receiver).expiredDate(LocalDateTime.now(ZoneId.of("Asia/Seoul")).plusDays(3)).build();
+
+        message1.undeleteMessage();
+
+        messageList.add(message1);
+
+        doReturn(messageList).when(messageRepository).findByReceiverIdAndIsActiveTrue(receiverId, Sort.by(Sort.Direction.DESC, "createdDate"));
+
+        // when
+        final ReceivedMessageData data = messageReceivedService.getReceivedMessages(receiverId, false);
+
+        // then
+        assertThat(data.getMessageList().get(0).isRead()).isEqualTo(message1.isRead());
+
+        // verify
+        verify(messageRepository, times(1)).findByReceiverIdAndIsActiveTrue(receiverId, Sort.by(Sort.Direction.DESC, "createdDate"));
+    }
+
     // getMessageDetail
     @Test
     void failGetMessageDetail_DifferentUser() {
@@ -97,22 +145,35 @@ class MessageReceivedServiceTest {
     @Test
     void successGetMessageDetail() {
         // given
-        Message message1 = Message.builder().id(0L).heart(heart).receiver(receiver).build();
-        Message message2 = Message.builder().isRead(true).id(0L).heart(heart).receiver(receiver).build();
+        long messageIdNoEmoji = 0L;
+        long messageIdWithEmoji = 1L;
+        Message messageNoEmoji = Message.builder().id(messageIdNoEmoji).heart(heart).receiver(receiver).build();
+        Message savedMessageNoEmoji = Message.builder().isRead(true).id(messageIdNoEmoji).heart(heart).receiver(receiver).build();
+        Emoji emoji = Emoji.builder().id(1L).name("name").imageUrl("url").build();
+        Message messageWithEmoji = Message.builder().id(messageIdWithEmoji).heart(heart).receiver(receiver).emoji(emoji).build();
+        Message savedMessageWithEmoji = Message.builder().isRead(true).id(messageIdWithEmoji).heart(heart).receiver(receiver).emoji(emoji).build();
 
-        doReturn(Optional.of(message1)).when(messageRepository).findById(0L);
-        doReturn(message2).when(messageRepository).save(message1);
+        doReturn(Optional.of(messageNoEmoji)).when(messageRepository).findById(messageIdNoEmoji);
+        doReturn(savedMessageNoEmoji).when(messageRepository).save(messageNoEmoji);
+        doReturn(Optional.of(messageWithEmoji)).when(messageRepository).findById(messageIdWithEmoji);
+        doReturn(savedMessageWithEmoji).when(messageRepository).save(messageWithEmoji);
 
         // when
-        final MessageData data = messageReceivedService.getMessageDetail(0L, receiverId);
+        final MessageData dataNoEmoji = messageReceivedService.getMessageDetail(messageIdNoEmoji, receiverId);
+        final MessageData dataWithEmoji = messageReceivedService.getMessageDetail(messageIdWithEmoji, receiverId);
 
         // then
-        assertThat(data.getMessageId()).isEqualTo(0L);
-        assertThat(data.isRead()).isTrue();
+        assertThat(dataNoEmoji.getMessageId()).isEqualTo(messageIdNoEmoji);
+        assertThat(dataNoEmoji.isRead()).isTrue();
+        assertThat(dataWithEmoji.getMessageId()).isEqualTo(messageIdWithEmoji);
+        assertThat(dataWithEmoji.getEmojiId()).isEqualTo(emoji.getId());
+        assertThat(dataWithEmoji.getEmojiName()).isEqualTo(emoji.getName());
+        assertThat(dataWithEmoji.getEmojiUrl()).isEqualTo(emoji.getImageUrl());
 
         // verify
-        verify(messageRepository, times(1)).findById(0L);
-        verify(messageRepository, times(1)).save(any(Message.class));
+        verify(messageRepository, times(1)).findById(messageIdNoEmoji);
+        verify(messageRepository, times(1)).findById(messageIdWithEmoji);
+        verify(messageRepository, times(2)).save(any(Message.class));
     }
 
 }
