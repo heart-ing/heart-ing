@@ -146,7 +146,7 @@ class MessageServiceTest extends AbstractTestData {
         int sentCnt = 1;
         HashOperations<String, String, Object> hashOperations = mock(HashOperations.class);
         doReturn(hashOperations).when(redisTemplate).opsForHash();
-        doReturn(0).when(hashOperations).get(anyString(),eq(notExistHeartId.toString()));
+        doReturn(null).when(hashOperations).get(anyString(),eq(notExistHeartId.toString()));
         doReturn(sentCnt).when(hashOperations).get(anyString(),eq(existHeartId.toString()));
 
         // when
@@ -167,7 +167,7 @@ class MessageServiceTest extends AbstractTestData {
         int sentCnt = 1;
         HashOperations<String, String, Object> hashOperations = mock(HashOperations.class);
         doReturn(hashOperations).when(redisTemplate).opsForHash();
-        doReturn(0).when(hashOperations).get(anyString(),eq(notExistHeartId.toString()));
+        doReturn(null).when(hashOperations).get(anyString(),eq(notExistHeartId.toString()));
         doReturn(sentCnt).when(hashOperations).get(anyString(),eq(existHeartId.toString()));
 
         // when
