@@ -13,9 +13,10 @@ import org.springframework.data.redis.core.*;
 
 import java.util.*;
 
-import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.doReturn;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.Mockito.mock;
 
 @ExtendWith(MockitoExtension.class)
 class MessageServiceTest extends AbstractTestData {
@@ -140,11 +141,13 @@ class MessageServiceTest extends AbstractTestData {
     @DisplayName("유저가 특정 하트 메시지를 전송한 개수")
     void getUserSentHeartCnt() {
         // given
-        notExistHeartId = 16L;
-        existHeartId = 1L;
+        Long notExistHeartId = 16L;
+        Long existHeartId = 1L;
         int sentCnt = 1;
-        HashOperations<String, String, Object> hashOperations = getMockRedisHashOperations();
+        HashOperations<String, String, Object> hashOperations = mock(HashOperations.class);
         doReturn(hashOperations).when(redisTemplate).opsForHash();
+        doReturn(0).when(hashOperations).get(anyString(),eq(notExistHeartId.toString()));
+        doReturn(sentCnt).when(hashOperations).get(anyString(),eq(existHeartId.toString()));
 
         // when
         int resultForNotExistHeartId = messageService.getUserSentHeartCnt("userId",notExistHeartId);
@@ -159,11 +162,13 @@ class MessageServiceTest extends AbstractTestData {
     @DisplayName("유저가 특정 하트 메시지를 수신한 개수")
     void getUserReceivedHeartCnt() {
         // given
-        notExistHeartId = 16L;
-        existHeartId = 1L;
+        Long notExistHeartId = 16L;
+        Long existHeartId = 1L;
         int sentCnt = 1;
-        HashOperations<String, String, Object> hashOperations = getMockRedisHashOperations();
+        HashOperations<String, String, Object> hashOperations = mock(HashOperations.class);
         doReturn(hashOperations).when(redisTemplate).opsForHash();
+        doReturn(0).when(hashOperations).get(anyString(),eq(notExistHeartId.toString()));
+        doReturn(sentCnt).when(hashOperations).get(anyString(),eq(existHeartId.toString()));
 
         // when
         int resultForNotExistHeartId = messageService.getUserReceivedHeartCnt("userId",notExistHeartId);
