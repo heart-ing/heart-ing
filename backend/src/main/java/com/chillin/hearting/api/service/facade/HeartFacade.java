@@ -45,15 +45,17 @@ public class HeartFacade {
         // 모든 하트를 반환하되, 기본 하트이거나 내가 획득한 하트는 잠금이 해제됩니다. 아직 잠긴 하트 중 내가 획득할 수 있는 하트인지 체크합니다.
         List<HeartData> result;
         if (user != null) result = findAllHeartDataWithUser(user);
-        else result = findAllHeartDataWithDefault();
+        else result = findAllHeartDataWithDefaultLocked();
 
         return HeartListData.builder().heartList(result).build();
     }
 
-    private List<HeartData> findAllHeartDataWithDefault() {
+    private List<HeartData> findAllHeartDataWithDefaultLocked() {
         List<HeartData> result = new ArrayList<>();
-        for (Heart heart : heartService.findDefaultTypeHearts()) {
-            result.add(HeartData.of(heart));
+        for (Heart heart : heartService.findAll()) {
+            HeartData data = HeartData.of(heart);
+            if (!HeartType.isDefault(data.getType())) data.setLock();
+            result.add(data);
         }
 
         return result;
@@ -71,7 +73,7 @@ public class HeartFacade {
             }
 
             if (heartCheckService.isUserAcquirableHeart(user.getId(), heart.getId())) {
-//                heartData.setAcq(true);
+                heartData.setAcq(true);
             }
         }
 
@@ -99,7 +101,13 @@ public class HeartFacade {
     }
 
     private List<HeartData> findMessageHeartsForUser(User user) {
-        List<HeartData> result = findAllHeartDataWithDefault();
+        List<HeartData> result = new ArrayList<>();
+        for (Heart heart : heartService.findDefaultTypeHearts()) {
+            HeartData heartData = HeartData.of(heart);
+            result.add(heartData);
+
+        }
+
         for (UserHeart myHeart : userHeartService.findAllByUserIdOrderByHeartId(user.getId())) {
             result.add(HeartData.of(myHeart.getHeart()));
         }
@@ -108,7 +116,7 @@ public class HeartFacade {
     }
 
     private List<HeartData> findMessageHeartsForNoLogin() {
-        ArrayList<HeartData> result = new ArrayList<>();
+        List<HeartData> result = new ArrayList<>();
         for (Heart heart : heartService.findDefaultTypeHearts()) {
             HeartData heartData = HeartData.of(heart);
             if (HeartInfo.isLockedToNoLogin(heart.getId())) {
@@ -164,7 +172,7 @@ public class HeartFacade {
     }
 
 
-    public boolean isNotAcquiredUserHeart(long heartId, String userId) {
+    private boolean isNotAcquiredUserHeart(long heartId, String userId) {
         return userHeartService.findByHeartIdAndUserId(heartId, userId).isEmpty();
     }
 }
