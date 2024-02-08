@@ -3,18 +3,17 @@ package com.chillin.hearting.api.service.facade;
 import com.chillin.hearting.api.data.EmojiData;
 import com.chillin.hearting.api.data.ReportData;
 import com.chillin.hearting.api.data.SendMessageData;
-import com.chillin.hearting.api.service.MessageService;
+import com.chillin.hearting.api.service.*;
 import com.chillin.hearting.db.domain.*;
-import com.chillin.hearting.db.repository.*;
 import com.chillin.hearting.exception.*;
-import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import java.util.Optional;
+import java.util.List;
 
 import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
 import static org.junit.jupiter.api.Assertions.*;
@@ -22,225 +21,387 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
-class MessageFacadeTest {
+class MessageFacadeTest extends AbstractTestData {
 
     @InjectMocks
     private MessageFacade messageFacade;
 
     @Mock
-    private UserRepository userRepository;
+    private UserService userService;
 
     @Mock
-    private HeartRepository heartRepository;
+    private HeartService heartService;
 
     @Mock
-    private MessageRepository messageRepository;
+    private MessageService messageService;
 
     @Mock
-    private ReportRepository reportRepository;
+    private UserHeartService userHeartService;
 
     @Mock
-    private EmojiRepository emojiRepository;
+    private HeartCheckService heartCheckService;
 
-    private final long heartId = 0L;
-    private final String senderId = "senderId";
-    private final String receiverId = "receiverId";
-    private final String title = "title";
-    private final String content = "content";
-    private final String senderIp = "senderIp";
-    private final String emojiUrl = "emojiUrl";
-    private final long messageId = 0L;
-    private final long emojiId = 0L;
+    @Mock
+    private EmojiService emojiService;
 
-    private final User receiver = User.builder().id(receiverId).messageTotal(0L).build();
-    private final User sender = User.builder().id(senderId).build();
-    private final Heart heart = Heart.builder().id(0L).name("testHeart").build();
-    private final Message message = Message.builder().id(0L).sender(sender).receiver(receiver).build();
-    private final Emoji emoji = Emoji.builder().id(0L).imageUrl(emojiUrl).build();
+    @Mock
+    private ReportUserService reportUserService;
 
-    @BeforeEach
-    public void setupIsActive() {
-        message.undeleteMessage();
-    }
+    @Mock
+    private NotificationService notificationService;
 
-    // sendMessage
-    @Test
-    void failSendMessage_NoReceiver() {
-        //given
-        doReturn(Optional.empty()).when(userRepository).findById(receiverId);
+    @Mock
+    private MigrationService migrationService;
 
-        // when
-        UserNotFoundException exception = assertThrows(UserNotFoundException.class, () -> messageFacade.sendMessage(heartId, senderId, receiverId, title, content, senderIp));
-
-        // then
-        assertEquals(UserNotFoundException.DEFAULT_MESSAGE, exception.getMessage());
-    }
+    @Mock
+    private BlockedUserService blockedUserService;
 
     @Test
-    void failSendMessage_NoSender() {
-        //given
-        doReturn(Optional.of(receiver)).when(userRepository).findById(receiverId);
-        doReturn(Optional.empty()).when(userRepository).findById(senderId);
-
-        // when
-        UserNotFoundException exception = assertThrows(UserNotFoundException.class, () -> messageFacade.sendMessage(heartId, senderId, receiverId, title, content, senderIp));
-
-        // then
-        assertEquals(UserNotFoundException.DEFAULT_MESSAGE, exception.getMessage());
-    }
-
-    @Test
-    void failSendMessage_NoHeart() {
-        //given
-        doReturn(Optional.of(receiver)).when(userRepository).findById(receiverId);
-        doReturn(Optional.of(sender)).when(userRepository).findById(senderId);
-        doReturn(Optional.empty()).when(heartRepository).findById(heartId);
-
-        // when
-        HeartNotFoundException exception = assertThrows(HeartNotFoundException.class, () -> messageFacade.sendMessage(heartId, senderId, receiverId, title, content, senderIp));
-
-        // then
-        assertEquals(HeartNotFoundException.DEFAULT_MESSAGE, exception.getMessage());
-    }
-
-    @Test
-    void successSendMessage() {
+    @DisplayName("ADMIN 스케줄러 동작")
+    void sendScheduledMessageToAdmin() {
         // given
-        doReturn(Optional.of(receiver)).when(userRepository).findById(receiverId);
-        doReturn(receiver).when(userRepository).save(receiver);
-        doReturn(Optional.of(sender)).when(userRepository).findById(senderId);
-        doReturn(Optional.of(heart)).when(heartRepository).findById(heartId);
-        doReturn(Message.builder().id(0L).heart(heart).receiver(receiver).sender(sender).title(title).content(content).senderIp(senderIp).build()).when(messageRepository).save(any(Message.class));
+        MessageFacade mockFacade = spy(messageFacade);
+        doReturn(receiver).when(userService).findById(anyString());
+        doNothing().when(mockFacade).sendScheduledMessages(eq(receiver));
+        doReturn(List.of(message)).when(messageService).findByReceiverIdAndSenderIp(anyString(),anyString());
+        doReturn(mock(Message.class)).when(messageService).save(eq(message));
+
+        assertThat(message.isActive()).isTrue();
 
         // when
-        final SendMessageData message = messageFacade.sendMessage(heartId, senderId, receiverId, title, content, senderIp);
+        mockFacade.sendScheduledMessageToAdmin();
 
         // then
-        assertThat(message.getHeartName()).isEqualTo("testHeart");
+        assertThat(message.isActive()).isFalse();
+    }
 
-        // verify
-        verify(userRepository, times(1)).findById(receiverId);
-        verify(userRepository, times(1)).findById(senderId);
-        verify(heartRepository, times(1)).findById(heartId);
-        verify(messageRepository, times(1)).save(any(Message.class));
+    @Test
+    @DisplayName("ADMIN 메시지 전송")
+    void sendScheduledMessages() {
+        // given
+        long messageTotal= receiver.getMessageTotal();
+        doReturn(mock(Heart.class)).when(heartService).findById(anyLong());
+        doReturn(mock(Message.class)).when(messageService).save(any(Message.class));
+        doReturn(mock(User.class)).when(userService).save(any(User.class));
+
+        // when
+        messageFacade.sendScheduledMessages(receiver);
+
+        // then
+        assertThat(receiver.getMessageTotal()).isEqualTo(messageTotal+5);
+    }
+
+   // sendMessage
+    @Test
+    @DisplayName("호감 메시지 전송 - Sender Null")
+    void successSendMessageNullSender() {
+        // given
+        doReturn(receiver).when(userService).findById(eq(receiver.getId()));
+        doReturn(like).when(heartService).findById(eq(like.getId()));
+        Message message = createMessage(1L,like,null,receiver,null);
+        doReturn(message).when(messageService).save(any(Message.class));
+        doReturn(specialHeartList).when(heartService).findSpecialTypeHearts();
+        /**
+         * 하트 이미 획득 6L,7L,11L,12L,13L,14L / 미획득 8L, 9L, 10L
+         */
+        doReturn(true).when(userHeartService).isUserAcquiredHeart(eq(receiver.getId()),eq(7L));
+        doReturn(true).when(userHeartService).isUserAcquiredHeart(eq(receiver.getId()),eq(11L));
+        doReturn(true).when(userHeartService).isUserAcquiredHeart(eq(receiver.getId()),eq(12L));
+        doReturn(true).when(userHeartService).isUserAcquiredHeart(eq(receiver.getId()),eq(13L));
+        doReturn(true).when(userHeartService).isUserAcquiredHeart(eq(receiver.getId()),eq(14L));
+        doReturn(false).when(userHeartService).isUserAcquiredHeart(eq(receiver.getId()),eq(8L));
+        doReturn(false).when(userHeartService).isUserAcquiredHeart(eq(receiver.getId()),eq(9L));
+        doReturn(false).when(userHeartService).isUserAcquiredHeart(eq(receiver.getId()),eq(10L));
+        /**
+         * 미획득 중 하트 획득 가능 9L, 10L
+         */
+        doReturn(false).when(heartCheckService).isUserAcquirableHeart(eq(receiver.getId()),eq(8L));
+        doReturn(true).when(heartCheckService).isUserAcquirableHeart(eq(receiver.getId()),eq(9L));
+        doReturn(true).when(heartCheckService).isUserAcquirableHeart(eq(receiver.getId()),eq(10L));
+        /**
+         * 획득 가능 중 24시간 내 알림 있음 9L
+         */
+        doReturn(true).when(notificationService).hasNotificationIn24Hour(contains("9"));
+        doReturn(false).when(notificationService).hasNotificationIn24Hour(contains("10"));
+
+        // when
+        final SendMessageData sendMessageData = messageFacade.sendMessage(message.getHeart().getId(), null, message.getReceiver().getId(), message.getTitle(), message.getContent(), message.getSenderIp());
+
+        // then
+        verify(userHeartService,times(specialHeartList.size())).isUserAcquiredHeart(eq(receiver.getId()),anyLong());
+        verify(heartCheckService,times(3)).isUserAcquirableHeart(eq(receiver.getId()),anyLong());
+        verify(notificationService, times(2)).hasNotificationIn24Hour(anyString());
+        verify(notificationService, times(1)).save(eq(receiver.getId()),eq(10L));
+        verify(notificationService, times(1)).setNotificationFor24Hour(contains("10"));
+        verify(userService, times(1)).findById(eq(receiver.getId()));
+        verify(userService, times(1)).save(eq(receiver));
+        verify(heartService, times(1)).findById(eq(like.getId()));
+        verify(messageService, times(1)).save(any(Message.class));
+        verify(notificationService, times(1)).save(any(Notification.class));
+        verify(migrationService, times(1)).updateReceivedHeartCount(eq(receiver.getId()),eq(like.getId()));
+
+        assertThat(sendMessageData.getMessageId()).isEqualTo(message.getId());
+        assertThat(sendMessageData.getHeartId()).isEqualTo(message.getHeart().getId());
+        assertThat(sendMessageData.getHeartName()).isEqualTo(message.getHeart().getName());
+        assertThat(sendMessageData.getHeartUrl()).isEqualTo(message.getHeart().getImageUrl());
+        assertThat(sendMessageData.isRead()).isFalse();
+    }
+
+    @Test
+    @DisplayName("호감 메시지 전송 - Sender not null")
+    void successSendMessageSender() {
+        // given
+        Message message = createMessage(1L,like,sender,receiver,null);
+        doReturn(receiver).when(userService).findById(eq(receiver.getId()));
+        doReturn(sender).when(userService).findById(eq(sender.getId()));
+        doReturn(like).when(heartService).findById(eq(like.getId()));
+        doReturn(message).when(messageService).save(any(Message.class));
+
+        // when
+        final SendMessageData sendMessageData = messageFacade.sendMessage(message.getHeart().getId(), message.getSender().getId(), message.getReceiver().getId(), message.getTitle(), message.getContent(), message.getSenderIp());
+
+        // then
+        verify(migrationService,times(1)).updateSentHeartCount(eq(message.getSender().getId()), eq(message.getHeart().getId()));
     }
 
     // deleteMessage
     @Test
-    void failDeleteMessage_NoMessage() {
+    @DisplayName("메시지 삭제 성공")
+    void deleteMessage() {
         //given
-        doReturn(Optional.empty()).when(messageRepository).findById(messageId);
+        User user = createUser(receiver.getId());
+        Message message = createMessage(1L,like,sender,receiver,null);
+        doReturn(message).when(messageService).findById(message.getId());
+        doReturn(message).when(messageService).save(any(Message.class));
 
         // when
-        MessageNotFoundException exception = assertThrows(MessageNotFoundException.class, () -> messageFacade.deleteMessage(messageId, receiverId));
-
-        // then
-        assertEquals(MessageNotFoundException.DEFAULT_MESSAGE, exception.getMessage());
-    }
-
-    @Test
-    void successDeleteMessage() {
-        //given
-        doReturn(Optional.of(message)).when(messageRepository).findById(messageId);
-        doReturn(Message.builder().id(0L).receiver(receiver).build()).when(messageRepository).save(any(Message.class));
-
-        // when
-        boolean result = messageFacade.deleteMessage(messageId, receiverId);
+        boolean result = messageFacade.deleteMessage(message.getId(), user.getId());
 
         // then
         assertFalse(result);
     }
 
     @Test
-    void successReportMessage() {
-        //given
-        doReturn(Optional.of(message)).when(messageRepository).findById(messageId);
-        doReturn(Optional.of(sender)).when(userRepository).findById(senderId);
-        doReturn(Optional.of(receiver)).when(userRepository).findById(receiverId);
-        doReturn(message).when(messageRepository).save(any(Message.class));
-        doReturn(sender).when(userRepository).save(any(User.class));
-        doReturn(Report.builder().id(1L).build()).when(reportRepository).save(any(Report.class));
+    @DisplayName("메시지 삭제 실패 - 유저 != 수신자")
+    void deleteMessageFailUserNotReceiver() {
+        // given
+        User user = createUser(receiver.getId()+"---");
+        Message message = createMessage(1L,like,sender,receiver,null);
+        doReturn(message).when(messageService).findById(message.getId());
 
         // when
-        ReportData data = messageFacade.reportMessage(messageId, receiverId, content);
-
-        // then
-        assertNotNull(data);
-        assertTrue(data.isLoggedInUser());
-
-        // verify
-        verify(messageRepository, times(1)).findById(messageId);
-        verify(userRepository, times(1)).findById(senderId);
-        verify(userRepository, times(1)).findById(receiverId);
-        verify(messageRepository, times(1)).save(any(Message.class));
-        verify(userRepository, times(1)).save(any(User.class));
-        verify(reportRepository, times(1)).save(any(Report.class));
+        assertThrows(UnAuthorizedException.class, () -> messageFacade.deleteMessage(message.getId(), user.getId()));
     }
 
     @Test
-    void failReportMessage_NoAuthorization() {
+    @DisplayName("메시지 삭제 실패 - 삭제된 메시지")
+    void deleteMessageFailMessageNotActive() {
+        // given
+        User user = createUser(receiver.getId());
+        Message message = createMessage(1L,like,sender,receiver,null);
+        doReturn(message).when(messageService).findById(message.getId());
+        message.deleteMessage();
+
+        // when
+        assertThrows(MessageAlreadyDeletedException.class, () -> messageFacade.deleteMessage(message.getId(), user.getId()));
+    }
+
+    @Test
+    @DisplayName("메시지 신고 성공")
+    void reportMessage() {
         //given
-        doReturn(Optional.of(message)).when(messageRepository).findById(messageId);
-        doReturn(Optional.of(sender)).when(userRepository).findById(senderId);
-        doReturn(Optional.of(receiver)).when(userRepository).findById(receiverId);
+        Message message = createMessage(1L,like,sender,receiver,null);
+        doReturn(message).when(messageService).findById(eq(message.getId()));
+        doReturn(message).when(messageService).save(eq(message));
+        doReturn(sender).when(userService).findById(eq(message.getSender().getId()));
+        sender.prePersist();
+        doReturn(receiver).when(userService).findById(eq(message.getReceiver().getId()));
+        doReturn(sender).when(userService).save(eq(sender));
+        doReturn(Report.builder().id(1L).build()).when(reportUserService).save(any(Report.class));
+
+        // when
+        ReportData data = messageFacade.reportMessage(message.getId(), receiver.getId(), message.getContent());
+
+        // then
+        assertTrue(message.isReported());
+        assertThat(sender.getReportedCount()).isEqualTo(1);
+        assertThat(sender.getStatus()).isEqualTo('A');
+        assertTrue(data.isLoggedInUser());
+
+        // verify
+        verify(messageService, times(1)).findById(message.getId());
+        verify(userService, times(1)).findById(sender.getId());
+        verify(userService, times(1)).findById(receiver.getId());
+        verify(messageService, times(1)).save(any(Message.class));
+        verify(userService, times(1)).save(any(User.class));
+        verify(reportUserService, times(1)).save(any(Report.class));
+        verify(blockedUserService, times(0)).save(any(BlockedUser.class));
+
+        // when
+        Message message2 = createMessage(2L,like,sender,receiver,null);
+        doReturn(message2).when(messageService).findById(eq(message2.getId()));
+        doReturn(message2).when(messageService).save(eq(message2));
+        messageFacade.reportMessage(message2.getId(), receiver.getId(), message2.getContent());
+
+        Message message3 = createMessage(3L,like,sender,receiver,null);
+        doReturn(message3).when(messageService).findById(eq(message3.getId()));
+        doReturn(message3).when(messageService).save(eq(message3));
+        messageFacade.reportMessage(message3.getId(), receiver.getId(), message3.getContent());
+
+        // then
+        assertThat(sender.getReportedCount()).isEqualTo(3);
+        assertThat(sender.getStatus()).isEqualTo('P');
+
+        // when
+        Message message4 = createMessage(4L,like,sender,receiver,null);
+        doReturn(message4).when(messageService).findById(eq(message4.getId()));
+        doReturn(message4).when(messageService).save(eq(message4));
+        messageFacade.reportMessage(message4.getId(), receiver.getId(), message4.getContent());
+
+        Message message5 = createMessage(5L,like,sender,receiver,null);
+        doReturn(message5).when(messageService).findById(eq(message5.getId()));
+        doReturn(message5).when(messageService).save(eq(message5));
+        messageFacade.reportMessage(message5.getId(), receiver.getId(), message5.getContent());
+
+        // then
+        assertThat(sender.getReportedCount()).isEqualTo(5);
+        assertThat(sender.getStatus()).isEqualTo('O');
+    }
+
+    @Test
+    @DisplayName("메시지 신고 실패 - 송신자 익명")
+    void reportMessageFailSenderNotLogin() {
+        // given
+        Message message = createMessage(1L,like,null,receiver,null);
+        doReturn(message).when(messageService).findById(eq(message.getId()));
+        doReturn(receiver).when(userService).findById(eq(message.getReceiver().getId()));
+
+        // when
+        ReportData reportData = messageFacade.reportMessage(message.getId(),receiver.getId(), message.getContent());
+
+        // then
+        assertThat(reportData.isLoggedInUser()).isFalse();
+    }
+
+    @Test
+    @DisplayName("메시지 신고 실패 - 유저 != 수신자")
+    void ReportMessageFailUserNotReceiver() {
+        //given
+        Message message = createMessage(1L,like,sender,receiver,null);
+        doReturn(message).when(messageService).findById(message.getId());
+        doReturn(sender).when(userService).findById(message.getSender().getId());
+        doReturn(receiver).when(userService).findById(message.getReceiver().getId());
         String differentId = "differentId";
 
         // when
-        UnAuthorizedException exception = assertThrows(UnAuthorizedException.class, () -> messageFacade.reportMessage(messageId, differentId, content));
+        UnAuthorizedException exception = assertThrows(UnAuthorizedException.class, () -> messageFacade.reportMessage(message.getId(), differentId, message.getContent()));
 
         // then
         assertEquals(exception.getMessage(), "본인이 받은 메시지만 신고할 수 있습니다.");
     }
 
     @Test
-    void failReportMessage_AlreadyReported() {
+    @DisplayName("메시지 신고 실패 - 이미 신고된 메시지")
+    void failReportMessageFailAlreadyReported() {
         //given
+        Message message = createMessage(1L,like,sender,receiver,null);
         message.reportMessage();
-        doReturn(Optional.of(message)).when(messageRepository).findById(messageId);
-        doReturn(Optional.of(sender)).when(userRepository).findById(senderId);
-        doReturn(Optional.of(receiver)).when(userRepository).findById(receiverId);
+        doReturn(message).when(messageService).findById(message.getId());
+        doReturn(sender).when(userService).findById(message.getSender().getId());
+        doReturn(receiver).when(userService).findById(message.getReceiver().getId());
 
         // when
-        MessageAlreadyReportedException exception = assertThrows(MessageAlreadyReportedException.class, () -> messageFacade.reportMessage(messageId, receiverId, content));
+        assertThrows(MessageAlreadyReportedException.class, () -> messageFacade.reportMessage(message.getId(), message.getReceiver().getId(), message.getContent()));
 
-        // then
-        assertEquals(exception.getMessage(), MessageAlreadyReportedException.DEFAULT_MESSAGE);
     }
 
     @Test
-    void successAddEmoji() {
+    @DisplayName("메시지 신고 실패 - 송신자 조회 불가")
+    void failReportMessageFailSenderNotFound() {
         //given
-        String emojiUrl = "emojiUrl";
-        doReturn(Optional.of(message)).when(messageRepository).findById(messageId);
-        doReturn(Optional.of(emoji)).when(emojiRepository).findById(emojiId);
-        message.updateEmoji(emoji);
-        doReturn(message).when(messageRepository).save(any(Message.class));
+        Message message = createMessage(1L,like,sender,receiver,null);
+        doReturn(message).when(messageService).findById(message.getId());
+        doReturn(receiver).when(userService).findById(message.getReceiver().getId());
+        doThrow(UserNotFoundException.class).when(userService).findById(message.getSender().getId());
 
         // when
-        EmojiData returned = messageFacade.addEmoji(messageId, receiverId, MessageFacadeTest.this.emojiId);
+        assertThrows(UserNotFoundException.class, () -> messageFacade.reportMessage(message.getId(), message.getReceiver().getId(), message.getContent()));
+
+    }
+
+    @Test
+    @DisplayName("메시지 좋아요 이모지 추가 - 로그인 유저")
+    void addEmojiForLogin() {
+        //given
+        Message message = createMessage(1L,like,sender,receiver,null);
+        doReturn(message).when(messageService).findById(eq(message.getId()));
+        doReturn(likeEmoji).when(emojiService).findById(eq(likeEmoji.getId()));
+        doReturn(message).when(messageService).save(eq(message));
+
+        // when
+        EmojiData emojiData = messageFacade.addEmoji(message.getId(), receiver.getId(), likeEmoji.getId());
 
         // then
-        assertNotNull(returned);
-        assertEquals(MessageFacadeTest.this.emojiUrl, returned.getEmojiUrl());
+        assertThat(emojiData.getEmojiUrl()).isEqualTo(likeEmoji.getImageUrl());
+        assertThat(emojiData.getSenderId()).isEqualTo(message.getSender().getId());
 
         // verify
-        verify(messageRepository, times(1)).findById(messageId);
-        verify(emojiRepository, times(1)).findById(MessageFacadeTest.this.emojiId);
-        verify(messageRepository, times(1)).save(any(Message.class));
+        verify(messageService, times(1)).findById(eq(message.getId()));
+        verify(emojiService, times(1)).findById(eq(likeEmoji.getId()));
+        verify(messageService, times(1)).save(eq(message));
+        verify(notificationService, times(1)).save(any(Notification.class));
     }
 
     @Test
-    void failAddEmoji_NoAuthorization() {
+    @DisplayName("메시지 좋아요 이모지 추가 - Sender Null")
+    void addEmojiForNullSender() {
+        // given
+        Message message = createMessage(1L,like,null,receiver,null);
+        doReturn(message).when(messageService).findById(eq(message.getId()));
+        doReturn(likeEmoji).when(emojiService).findById(eq(likeEmoji.getId()));
+        doReturn(message).when(messageService).save(eq(message));
+
+        // when
+        EmojiData emojiData = messageFacade.addEmoji(message.getId(), receiver.getId(), likeEmoji.getId());
+
+        // then
+        assertThat(emojiData.getEmojiUrl()).isEqualTo(likeEmoji.getImageUrl());
+        assertThat(emojiData.getSenderId()).isNull();
+
+        // verify
+        verify(messageService, times(1)).findById(eq(message.getId()));
+        verify(emojiService, times(1)).findById(eq(likeEmoji.getId()));
+        verify(messageService, times(1)).save(eq(message));
+        verify(notificationService, times(0)).save(any(Notification.class));
+    }
+
+    @Test
+    @DisplayName("메시지 이모지 삭제 - 로그인 유저")
+    void removeEmojiForLogin() {
+        // given
+        Message message = createMessage(1L,like,sender,receiver,null);
+        doReturn(message).when(messageService).findById(eq(message.getId()));
+        doReturn(message).when(messageService).save(eq(message));
+
+        // when
+        EmojiData emojiData = messageFacade.addEmoji(message.getId(), receiver.getId(), -1);
+
+        // then
+        assertThat(emojiData.getEmojiUrl()).isNull();
+        assertThat(emojiData.getSenderId()).isEqualTo(message.getSender().getId());
+    }
+
+    @Test
+    @DisplayName("이모지 추가 실패 - 유저 != 수신자")
+    void addEmojiFailUserNotReceiver() {
         //given
-        doReturn(Optional.of(message)).when(messageRepository).findById(messageId);
-        doReturn(Optional.of(emoji)).when(emojiRepository).findById(emojiId);
+        Message message = createMessage(1L,like,sender,receiver,null);
+        doReturn(message).when(messageService).findById(message.getId());
+        doReturn(likeEmoji).when(emojiService).findById(likeEmoji.getId());
         String differentId = "differentId";
 
         // when
-        UnAuthorizedException exception = assertThrows(UnAuthorizedException.class, () -> messageFacade.addEmoji(messageId, differentId, emojiId));
-
-        // then
-        assertEquals(exception.getMessage(), "본인이 받은 메시지에만 이모지를 달 수 있습니다.");
+        assertThrows(UnAuthorizedException.class, () -> messageFacade.addEmoji(message.getId(), differentId, likeEmoji.getId()));
     }
 
 }
