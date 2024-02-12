@@ -31,14 +31,16 @@ public class MessageController {
 
         User user = (User) httpServletRequest.getAttribute("user");
 
-        // Check if logged-in user is same as sender
-        if (user != null && !user.getId().equals(sendMessageReq.getSenderId())) {
-            throw new WrongUserException();
-        }
+        if (user != null) {
+            // Check if logged-in user is same as sender
+            if (!user.getId().equals(sendMessageReq.getSenderId())) {
+                throw new WrongUserException();
+            }
 
-        // Check if sent to myself
-        if (user != null && user.getId().equals(sendMessageReq.getReceiverId())) {
-            throw new WrongUserException("본인에게 메시지를 보냈습니다.");
+            // Check if sent to myself
+            if (user.getId().equals(sendMessageReq.getReceiverId())) {
+                throw new WrongUserException("본인에게 메시지를 보냈습니다.");
+            }
         }
 
         // Check if title is longer than 12 characters
