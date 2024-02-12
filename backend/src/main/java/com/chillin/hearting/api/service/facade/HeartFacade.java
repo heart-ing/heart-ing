@@ -45,12 +45,12 @@ public class HeartFacade {
         // 모든 하트를 반환하되, 기본 하트이거나 내가 획득한 하트는 잠금이 해제됩니다. 아직 잠긴 하트 중 내가 획득할 수 있는 하트인지 체크합니다.
         List<HeartData> result;
         if (user != null) result = findAllHeartDataWithUser(user);
-        else result = findAllHeartDataWithDefaultLocked();
+        else result = findAllHeartDataLockedExceptDefault();
 
         return HeartListData.builder().heartList(result).build();
     }
 
-    private List<HeartData> findAllHeartDataWithDefaultLocked() {
+    public List<HeartData> findAllHeartDataLockedExceptDefault() {
         List<HeartData> result = new ArrayList<>();
         for (Heart heart : heartService.findAll()) {
             HeartData data = HeartData.of(heart);
