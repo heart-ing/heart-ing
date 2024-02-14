@@ -97,6 +97,7 @@ public class AbstractTestData {
                 .sender(sender)
                 .receiver(receiver)
                 .emoji(emoji)
+                .isActive(true)
                 .build();
     }
 
