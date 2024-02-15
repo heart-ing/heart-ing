@@ -92,10 +92,6 @@ public class User implements Serializable {
         this.status = 'A';
     }
 
-    public void saveRefreshToken(String refreshToken) {
-        this.refreshToken = refreshToken;
-    }
-
     public void deleteRefreshToken() {
         this.refreshToken = null;
     }

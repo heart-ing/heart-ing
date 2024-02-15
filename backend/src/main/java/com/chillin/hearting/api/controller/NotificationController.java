@@ -37,10 +37,6 @@ public class NotificationController {
 
         Data notificationData = notificationService.getNotifications(user.getId());
 
-        if (notificationData == null) {
-            throw new NotificationListFailException();
-        }
-
         ResponseDTO responseDTO = ResponseDTO.builder()
                 .status(SUCCESS)
                 .message(SUCCESS_MESSAGE_GET_NOTIFICATIONS)
@@ -60,10 +56,6 @@ public class NotificationController {
         }
 
         Long result = notificationService.readNotification(notificationId);
-
-        if (result == null) {
-            throw new NotificationReadFailException();
-        }
 
         ResponseDTO responseDTO = ResponseDTO.builder()
                 .status(SUCCESS)

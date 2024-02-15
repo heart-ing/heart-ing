@@ -49,7 +49,6 @@ public class UserService {
     private final UserRepository userRepository;
     private final AuthTokenProvider tokenProvider;
     private final AppProperties appProperties;
-    private final AuthTokenProvider authTokenProvider;
 
     private final RedisTemplate<String, Object> redisTemplate;
 
@@ -225,6 +224,11 @@ public class UserService {
         return tokenProvider.createAuthToken(new Date(now.getTime() + refreshTokenExpiry));
     }
 
+    @Transactional(readOnly = true)
+    public User findById(String userId) {
+        return userRepository.findById(userId).orElseThrow(UserNotFoundException::new);
+    }
+
     /**
      * 관리자 계정 로그인을 처리합니다.
      *
@@ -235,12 +239,11 @@ public class UserService {
      */
     @Transactional
     public SocialLoginData adminLogin(LoginTestReq loginReq, HttpServletRequest httpServletRequest, HttpServletResponse httpServletResponse) {
-        User loginuser = userRepository.findById(loginReq.getId()).orElseThrow(UserNotFoundException::new);
-
+        User loginUser = findById(loginReq.getId());
 
         Date now = new Date();
 
-        AuthToken accessToken = authTokenProvider.createAuthToken(
+        AuthToken accessToken = tokenProvider.createAuthToken(
                 loginReq.getId(),
                 "ROLE_ADMIN",
                 new Date(now.getTime() + appProperties.getAuth().getTokenExpiry())
@@ -250,15 +253,15 @@ public class UserService {
         AuthToken refreshToken = makeRefreshToken();
 
         ValueOperations<String, Object> valueOperations = redisTemplate.opsForValue();
-        String key = USER_TOKEN + loginuser.getId();
+        String key = USER_TOKEN + loginUser.getId();
         valueOperations.set(key, refreshToken.getToken(), 14L, TimeUnit.DAYS);
         log.info("refresh token redis에 저장했다?");
 
-        SocialLoginData socialLoginData = SocialLoginData.builder().userId(loginuser.getId()).nickname(loginuser.getNickname()).accessToken(accessToken.getToken()).isFirst(false).build();
+        SocialLoginData socialLoginData = SocialLoginData.builder().userId(loginUser.getId()).nickname(loginUser.getNickname()).accessToken(accessToken.getToken()).isFirst(false).build();
 
         int cookieMaxAge = (int) refreshTokenExpiry / 60;
 
-        CookieUtil.deleteCookie(httpServletRequest, httpServletResponse, REFRESH_TOKEN);
+        deleteCookieRefreshToken(httpServletRequest, httpServletResponse);
 
         CookieUtil.addCookie(httpServletResponse, REFRESH_TOKEN, refreshToken.getToken(), cookieMaxAge);
 
@@ -285,11 +288,6 @@ public class UserService {
      */
     public void deleteCookieRefreshToken(HttpServletRequest httpServletRequest, HttpServletResponse httpServletResponse) {
         CookieUtil.deleteCookie(httpServletRequest, httpServletResponse, REFRESH_TOKEN);
-    }
-
-    @Transactional(readOnly = true)
-    public User findById(String userId) {
-        return userRepository.findById(userId).orElseThrow(UserNotFoundException::new);
     }
 
     @Transactional

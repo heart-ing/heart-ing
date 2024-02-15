@@ -33,7 +33,12 @@ public class MessageReceivedController {
         User user = (User) httpServletRequest.getAttribute("user");
 
         // Check if the user is requesting his own page
-        boolean isSelf = user != null && userId.equals(user.getId());
+        boolean isSelf = false;
+        if (user != null) {
+            if (userId.equals(user.getId())) {
+                isSelf = true;
+            }
+        }
 
         Data data = messageReceivedService.getReceivedMessages(userId, isSelf);
 

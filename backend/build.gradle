@@ -3,6 +3,7 @@ plugins {
     id 'org.springframework.boot' version '2.7.10'
     id 'io.spring.dependency-management' version '1.0.15.RELEASE'
     id "org.sonarqube" version "3.4.0.2513"
+    id 'jacoco'
 }
 
 group = 'com.chillin'
@@ -57,9 +58,97 @@ dependencies {
     // twitter
     implementation group: 'org.springframework.social', name: 'spring-social-twitter', version: '1.1.2.RELEASE'
 
+    // mockito static
+    testImplementation group: 'org.mockito', name: 'mockito-inline', version: '4.5.1'
+
+    testCompileOnly 'org.projectlombok:lombok'
+    testAnnotationProcessor 'org.projectlombok:lombok'
 
 }
 
 tasks.named('test') {
     useJUnitPlatform()
+}
+
+def    jacocoExcludes = [
+        '**/config/*',
+        '**/exception/*',
+        '**/request/*',
+        '**/response/*',
+        '**/data/*',
+        '**/oauth/*',
+        '**/jwt/*',
+        '**/Hearting*',
+        '**/OAuth*',
+        '**/Migration*',
+]
+
+test {
+    finalizedBy jacocoTestReport // report is always generated after tests run
+    jacoco {
+        excludes = jacocoExcludes
+    }
+
+}
+
+jacocoTestReport {
+    dependsOn test // tests are required to run before generating the report
+    reports {
+        xml.required = false
+        csv.required = false
+        html.outputLocation = layout.buildDirectory.dir('jacocoHtml')
+    }
+    afterEvaluate {
+        //dto 및 외부 연동 서비스는 테스트에서 제외
+        classDirectories.setFrom(files(classDirectories.files.collect {
+            fileTree(dir: it, exclude: jacocoExcludes)})
+        )
+    }
+}
+
+jacoco {
+    toolVersion = "0.8.8"
+    reportsDirectory = layout.buildDirectory.dir('reports/jacoco')
+}
+
+jacocoTestCoverageVerification {
+    violationRules {
+        rule {
+            enabled = true
+            // 'element'가 없으면 프로젝트의 전체 파일을 합친 값을 기준으로 합니다.
+            element = 'CLASS'
+            excludes = [
+                    '**.config.*',
+                    '**.exception.*',
+                    '**.request.*',
+                    '**.response.*',
+                    '**.data.*',
+                    '**.oauth.*',
+                    '**.jwt.*',
+                    '**.Hearting*',
+                    '**.OAuth*',
+                    '**.Migration*',
+            ]
+
+            limit {
+                // 'counter'를 지정하지 않으면 default는 'INSTRUCTION'
+                // 'value'를 지정하지 않으면 default는 'COVEREDRATIO'
+                counter = 'INSTRUCTION'
+                value = 'COVEREDRATIO'
+                minimum = 1.0
+            }
+        }
+    }
+}
+
+task testCoverage(type: Test) {
+    group 'verification'
+    description 'Runs the unit tests with coverage'
+
+    dependsOn(':test',
+            ':jacocoTestReport',
+            ':jacocoTestCoverageVerification')
+
+    tasks['jacocoTestReport'].mustRunAfter(tasks['test'])
+    tasks['jacocoTestCoverageVerification'].mustRunAfter(tasks['jacocoTestReport'])
 }

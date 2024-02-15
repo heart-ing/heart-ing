@@ -6,20 +6,22 @@ import com.chillin.hearting.db.domain.Heart;
 import com.chillin.hearting.db.domain.Message;
 import com.chillin.hearting.db.domain.User;
 import com.chillin.hearting.db.repository.InboxRepository;
-import com.chillin.hearting.db.repository.UserRepository;
+import com.chillin.hearting.exception.MessageAlreadyExpiredException;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.Mockito.any;
-import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 class MessageInboxServiceTest {
@@ -30,9 +32,6 @@ class MessageInboxServiceTest {
     @Mock
     private InboxRepository inboxRepository;
 
-    @Mock
-    private UserRepository userRepository;
-
     private final String fakeSenderId = "1";
     private final String getFakeReceiverId = "2";
     private User user1 = createUser(fakeSenderId, "test1.com", "nick1");
@@ -42,7 +41,8 @@ class MessageInboxServiceTest {
 
 
     @Test
-    void 메시지영구보관() {
+    @DisplayName("메시지 영구 보관 성공")
+    void storeMessageSuccess() {
         // given
         Long fakeId = 1L;
         Message savedMessage = createMessage(fakeId);
@@ -61,7 +61,27 @@ class MessageInboxServiceTest {
     }
 
     @Test
-    void 영구보관메시지조회() {
+    @DisplayName("메시지 영구 보관 실패")
+    void storeMessageFail() {
+        // given
+        Message mockMessage = mock(Message.class);
+        when(inboxRepository.findById(eq(1L))).thenReturn(Optional.ofNullable(mockMessage));
+        when(mockMessage.getExpiredDate()).thenReturn(LocalDateTime.now(ZoneId.of("Asia/Seoul")).minusHours(1));
+
+        // when
+        try {
+            messageInboxService.storeMessage(1L);
+        } catch (Exception e) {
+            assertThat(e).isInstanceOf(MessageAlreadyExpiredException.class);
+        }
+
+        // then
+        verify(mockMessage, times(0)).toInbox();
+    }
+
+    @Test
+    @DisplayName("영구보관 메시지 조회")
+    void findInboxMessages() {
         // given
         Message m1 = createMessage(1L);
         Message m2 = createMessage(2L);
@@ -80,14 +100,14 @@ class MessageInboxServiceTest {
     }
 
     @Test
-    public void 영구보관메시지상세조회() {
+    @DisplayName("영구보관 메시지 상세 조회")
+    void findInboxDetailMessage() {
         // given
         Long fakeMessageId = 1L;
         Message message = createMessage(fakeMessageId);
         message.toInbox();
 
         // mocking
-        when(userRepository.findById(any())).thenReturn(Optional.ofNullable(user2));
         when(inboxRepository.findByIdAndReceiverIdAndIsStored(any(), any(), any())).thenReturn(Optional.of(message));
 
         // when
@@ -98,7 +118,8 @@ class MessageInboxServiceTest {
     }
 
     @Test
-    public void 메시지영구삭제() {
+    @DisplayName("메시지 영구 삭제")
+    void deleteMessage() {
         // given
         Long fakeId = 1L;
         Message savedMessage = createMessage(fakeId);
@@ -116,7 +137,7 @@ class MessageInboxServiceTest {
     }
 
 
-    public User createUser(String id, String email, String nickname) {
+    User createUser(String id, String email, String nickname) {
         if ("".equals(email)) email = "test.com";
         if ("".equals(nickname)) nickname = "test-nick";
         User user = User.builder()
@@ -128,7 +149,7 @@ class MessageInboxServiceTest {
         return user;
     }
 
-    public Heart createDefaultHeart() {
+    Heart createDefaultHeart() {
         Heart heart = Heart.builder()
                 .name("호감 하트")
                 .imageUrl("test.com")
@@ -150,7 +171,7 @@ class MessageInboxServiceTest {
         return emoji;
     }
 
-    public Message createMessage(Long id) {
+    Message createMessage(Long id) {
         return Message.builder()
                 .id(id)
                 .heart(heart)
@@ -161,5 +182,4 @@ class MessageInboxServiceTest {
                 .content("content")
                 .build();
     }
-
 }

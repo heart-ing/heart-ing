@@ -10,7 +10,6 @@ import java.time.ZoneId;
 @ToString
 @Entity
 @Getter
-@AllArgsConstructor
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class Report implements Serializable {
 

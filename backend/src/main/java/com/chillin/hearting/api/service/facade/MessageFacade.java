@@ -300,6 +300,9 @@ public class MessageFacade {
             log.info(messageId + " 메시지에 " + emoji.getName() + " 반응이 추가되었습니다.");
         }
 
-        return EmojiData.builder().emojiUrl(message.getEmoji().getImageUrl()).senderId((message.getSender() != null) ? message.getSender().getId() : null).build();
+        return EmojiData.builder()
+                .emojiUrl(message.getEmoji() != null ? message.getEmoji().getImageUrl() : null)
+                .senderId((message.getSender() != null) ? message.getSender().getId() : null)
+                .build();
     }
 }

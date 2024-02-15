@@ -19,13 +19,14 @@ public class CookieUtil {
     public static Optional<Cookie> getCookie(HttpServletRequest request, String name) {
         Cookie[] cookies = request.getCookies();
 
-        if (cookies != null && cookies.length > 0) {
+        if (cookies != null) {
             for (Cookie cookie : cookies) {
                 if (name.equals(cookie.getName())) {
                     return Optional.of(cookie);
                 }
             }
         }
+
         return Optional.empty();
     }
 
@@ -41,29 +42,15 @@ public class CookieUtil {
     public static void deleteCookie(HttpServletRequest request, HttpServletResponse response, String name) {
         Cookie[] cookies = request.getCookies();
 
-        if (cookies != null && cookies.length > 0) {
-            for (Cookie cookie : cookies) {
-                if (name.equals(cookie.getName())) {
-                    cookie.setValue("");
-                    cookie.setPath("/");
-                    cookie.setMaxAge(0);
-                    response.addCookie(cookie);
-                }
+        if (cookies == null) return;
+
+        for (Cookie cookie : cookies) {
+            if (name.equals(cookie.getName())) {
+                cookie.setValue("");
+                cookie.setPath("/");
+                cookie.setMaxAge(0);
+                response.addCookie(cookie);
             }
         }
     }
-
-    public static String serialize(Object obj) {
-        return Base64.getUrlEncoder()
-                .encodeToString(SerializationUtils.serialize(obj));
-    }
-
-    public static <T> T deserialize(Cookie cookie, Class<T> cls) {
-        return cls.cast(
-                SerializationUtils.deserialize(
-                        Base64.getUrlDecoder().decode(cookie.getValue())
-                )
-        );
-    }
-
 }

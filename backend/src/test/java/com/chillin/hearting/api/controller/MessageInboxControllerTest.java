@@ -1,6 +1,8 @@
 package com.chillin.hearting.api.controller;
 
 import com.chillin.hearting.api.service.MessageInboxService;
+import com.chillin.hearting.db.domain.Heart;
+import com.chillin.hearting.db.domain.Message;
 import com.chillin.hearting.db.domain.User;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -14,7 +16,11 @@ import org.springframework.test.web.servlet.ResultActions;
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+
+import static org.hamcrest.Matchers.is;
+import static org.mockito.Mockito.doReturn;
 
 @ExtendWith(MockitoExtension.class)
 class MessageInboxControllerTest {
@@ -77,6 +83,8 @@ class MessageInboxControllerTest {
         // given
         final String url = "/api/v1/messages/inbox/1";
         User user = User.builder().id("otherSender").build();
+        Heart heart = Heart.builder().build();
+        doReturn(Message.builder().id(1L).heart(heart).build()).when(messageInboxService).findInboxDetailMessage("otherSender",1L);
 
         // when
         final ResultActions resultActions = mockMvc.perform(
@@ -90,7 +98,9 @@ class MessageInboxControllerTest {
         );
 
         // then
-        resultActions.andExpect(status().isOk());
+        resultActions
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.messageId", is(1)));
     }
 
     @Test
