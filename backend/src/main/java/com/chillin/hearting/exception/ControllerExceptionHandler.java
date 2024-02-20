@@ -314,4 +314,15 @@ public class ControllerExceptionHandler {
                 .message(e.getMessage())
                 .build();
     }
+
+    @ExceptionHandler(NoHeartStrategyException.class)
+    @ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
+    @ResponseBody
+    public ResponseDTO handleNoHeartStrategyException(NoHeartStrategyException e) {
+        log.error(e.getMessage());
+        return ResponseDTO.builder()
+                .status(FAIL)
+                .message(e.getMessage())
+                .build();
+    }
 }
