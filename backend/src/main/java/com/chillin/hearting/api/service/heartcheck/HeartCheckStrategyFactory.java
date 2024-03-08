@@ -2,6 +2,7 @@ package com.chillin.hearting.api.service.heartcheck;
 
 import com.chillin.hearting.api.service.HeartService;
 import com.chillin.hearting.api.service.MessageService;
+import com.chillin.hearting.exception.NoHeartStrategyException;
 import lombok.RequiredArgsConstructor;
 
 @RequiredArgsConstructor
@@ -32,9 +33,9 @@ public class HeartCheckStrategyFactory {
                 return new NoirHeartCheckStrategy(heartService, messageService);
             case 15:
                 return new CarnationHeartCheckStrategy();
+            default:
+                throw new NoHeartStrategyException();
 
         }
-
-        return null;
     }
 }
